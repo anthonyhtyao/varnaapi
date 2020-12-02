@@ -6,8 +6,12 @@ from string import ascii_lowercase, ascii_uppercase
 
 VARNA_PATH="VARNAv3-93.jar"
 HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
+BORDER = re.compile('^\d+x\d+$')
 DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
                       'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
+OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+
+NUMERIC_OPTIONS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
 
 PARENTHESES_SYSTEMS = [
     ("(", ")"),
@@ -67,10 +71,10 @@ class VARNA:
         self.dbn = None
         self.aux_BPs = []
         self.highlight_regions = []
-        self.algorithm = 'naview'
+        self.params = {'algorithm': "naview"}
         self.default_color = {}
+        self.options = {}
         self.title = None
-        self.zoom = None
 
         if structure is not None:
             if isinstance(structure, list):
@@ -108,7 +112,7 @@ class VARNA:
         color = assert_hex_color(color)
         assert_is_number('thickness', thickness)
 
-        self.aux_BPs.append((i, j, color, thickness, edge5, edge3, stericity))
+        self.aux_BPs.append((i+1, j+1, color, thickness, edge5, edge3, stericity))
 
     def add_highlight_region(self, i, j, fill="#9999FF", radius=15.0, outline="#3333FF"):
         assert_valid_interval(self.length, i, j)
@@ -116,26 +120,44 @@ class VARNA:
         outline = assert_hex_color(outline)
         assert_is_number('radius', radius)
 
-        self.highlight_regions.append((i, j, radius, fill, outline))
+        self.highlight_regions.append((i+1, j+1, radius, fill, outline))
 
     def set_algorithm(self, algo):
         if algo not in ['line', 'circular', 'radiate', 'naview']:
             raise Exception("Sould be one of line, circular, radiate or naview")
-        self.algorithm = algo
+        self.params['algorithm'] = algo
 
 
     def set_title(self, title, color='#808080', size=10):
         self.title = (title, color, size)
 
     def set_zoom_level(level):
-        self.zoom = level
+        self.param['zoom'] = level
 
     def set_default_color(self, **kwargs):
         for key, value in kwargs.items():
-            if not key in DEFAULT_COLOR_LIST:
+            if key not in DEFAULT_COLOR_LIST:
                 raise Exception("{} is not a valid keyword".format(key))
             assert_hex_color(value)
         self.default_color = kwargs
+
+    def toggle_options(self, **kwargs):
+        for key, value in kwargs.items():
+            if key not in OPTIONS:
+                raise Exception("{} is not a valid keyword".format(key))
+            if not isinstance(value, bool):
+                raise Exception(key + "should be a boolean")
+        self.options = kwargs
+
+    def set_numeric_params(self, **kwargs):
+        for key, value in kwargs.items():
+            if key not in NUMERIC_OPTIONS:
+                raise Exception("{} is not a valid keyword".format(key))
+            assert_is_number(value)
+            if key == "periodNum":
+                self.params['periodNum'] = int(value)
+            else:
+                self.params[key] = float(value)
 
     def format_structure(self):
         def greedy_fill(c1, c2, res, ss, i, j):
@@ -162,15 +184,41 @@ class VARNA:
                 break
         return "".join(res)
 
+
+    def set_border(self, border):
+        match = BORDER.search(border)
+        if not match:
+            raise Exception("border should be the format nxm where n and m are numbers")
+        self.params['border'] = "\"{}\"".format(border)
+
+    def set_bp_style(self, style):
+        if style not in ['none', 'line', 'rnaviz', 'lw']:
+            raise Exception('Should be one of none, line, rnaviz or lw')
+        self.params['bpStyle'] = style
+
+    def set_bp_increment(self, value):
+        assert_is_number('value', value)
+        self.params['bpIncrement'] = float(value)
+
+
+
     def _gen_command(self):
         cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(VARNA_PATH)
         cmd += " -sequenceDBN \"{}\" -structureDBN \"{}\" -o {}".format(self.sequence, self.format_structure(), self.output)
-        cmd += " -algorithm {}".format(self.algorithm)
 
         # Command for defualt colors
         for key, color in self.default_color.items():
             if color is not None:
                 cmd += " -{} {}".format(key, color)
+
+        # Options
+        for key, value in self.options.items():
+            if value is not None:
+                cmd += " -{} {}".format(key, value)
+
+        # Params
+        for key, value in self.params.items():
+            cmd += " -{} {}".format(key, value)
 
         # Title
         if self.title is not None:
