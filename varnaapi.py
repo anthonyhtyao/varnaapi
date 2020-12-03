@@ -22,6 +22,34 @@ PARENTHESES_SYSTEMS = [
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
+
+class BasesStyle:
+    def __init__(self, fill=None, outline=None, label=None, number=None):
+        self.color = {}
+        self.update(fill, outline, label, number)
+
+    def update(self, fill=None, outline=None, label=None, number=None):
+        if fill is None and outline is None and label is None and number is None:
+            raise Exception("At least one should not be None")
+        if fill is not None:
+            fill = assert_hex_color(fill)
+            self.color["fill"] = fill
+        if outline is not None:
+            outline = assert_hex_color(outline)
+            self.color["outline"] = outline
+        if label is not None:
+            label = assert_hex_color(label)
+            self.color["label"] = label
+        if number is not None:
+            number = assert_hex_color(number)
+            self.color["number"] = number
+
+    def __str__(self):
+        order = ['fill', 'outline', 'label', 'number']
+        lst = ["{}={}".format(k, self.color[k]) for k in order if k in self.color]
+        return ",".join(lst)
+
+
 def is_hex_color(color):
     match = HEX.search(color)
     if match:
@@ -75,6 +103,7 @@ class VARNA:
         self.default_color = {}
         self.options = {}
         self.title = None
+        self.bases_styles = {}
 
         if structure is not None:
             if isinstance(structure, list):
@@ -131,7 +160,7 @@ class VARNA:
     def set_title(self, title, color='#808080', size=10):
         self.title = (title, color, size)
 
-    def set_zoom_level(level):
+    def set_zoom_level(self, level):
         self.param['zoom'] = level
 
     def set_default_color(self, **kwargs):
@@ -201,6 +230,11 @@ class VARNA:
         self.params['bpIncrement'] = float(value)
 
 
+    def add_bases_style(self, style, bases):
+        if not isinstance(style, BasesStyle):
+            raise Exception("style should be BasesStyle object")
+        if len(bases) > 0:
+            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
 
     def _gen_command(self):
         cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(VARNA_PATH)
@@ -235,6 +269,10 @@ class VARNA:
             regions = ["{}-{}:radius={},fill={},outline={}".format(*t) for t in self.highlight_regions]
             cmd += " -highlightRegion \"{}\"".format(";".join(regions))
 
+        # BasesStyles
+        for ind, (style, bases) in enumerate(self.bases_styles.items()):
+            cmd += " -basesStyle{} {}".format(ind+1, str(style))
+            cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
 
         return cmd
 
