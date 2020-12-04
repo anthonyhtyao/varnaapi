@@ -36,13 +36,10 @@ OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbon
 | drawBackbone      | Backbone drawing                                                                                                                              | True    |
 | drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
 | drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
-| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
+| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots                                                                                        | False   |
 | fillBases         | Fill bases                                                                                                                                    | True    |
 | flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
 
-__See Also:__ [VARNA.toggle_options][varnaapi.VARNA.toggle_options]
-
-[^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
 """
 
 NUMERIC_PARAMS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
