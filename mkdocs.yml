@@ -1,0 +1,16 @@
+# mkdocs.yml
+
+site_name: VARNA API
+theme:
+  name: "material"
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      watch:
+        - varnaapi.py
+
+
+markdown_extensions:
+  - footnotes
