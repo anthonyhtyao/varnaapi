@@ -73,14 +73,16 @@ def assert_valid_interval(length, *args):
 def check_structure(ss):
     pass
 
-def bp_to_struct(bps):
+
+def _bp_to_struct(bps):
+    """Base pair list to structure"""
     n = max([j for i, j in bps]) + 1
     ss = [-1 for i in range(n)]
     for i, j in bps:
         ss[i], ss[j] = j, i
     return ss
 
-def parse_vienna(ss):
+def _parse_vienna(ss):
     """
     Parse secondary structure in dot-bracket notation
     """
@@ -119,12 +121,12 @@ class VARNA:
                     if len(first)==1:
                         self.structure = check_structure(structure)
                     elif len(first)==2:
-                        self.structure = bp_to_struct(structure)
+                        self.structure = _bp_to_struct(structure)
                     else:
                         raise Exception("Unrecognized structure format for %s"%(structure))
             # Dot-Bracket Notation
             elif isinstance(structure, str):
-                self.structure = parse_vienna(structure)
+                self.structure = _parse_vienna(structure)
                 self.dbn = structure
             self.length = len(self.structure)
         if seq is not None:
