@@ -2,8 +2,8 @@
 
 site_name: VARNA API
 theme:
-  name: "readthedocs"
-  # name: "material"
+  # name: "readthedocs"
+  name: "material"
 
 nav:
   - Overview: index.md
