@@ -1,17 +1,76 @@
 import re
 import os
 from string import ascii_lowercase, ascii_uppercase
+from typing import Union
 
 
 
 VARNA_PATH="VARNAv3-93.jar"
 HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
 BORDER = re.compile('^\d+x\d+$')
+
 DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
                       'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
-OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+"""Allowed options for color setting
 
-NUMERIC_OPTIONS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
+| Name         | Object in panel                                         |
+|--------------|---------------------------------------------------------|
+| backbone     | Phosphate-sugar backbone (aka skeleton) of the RNA      |
+| background   | Background color used within the panel                  |
+| baseInner    | Inner base color                                        |
+| baseName     | Nucleotide name                                         |
+| baseNum      | Base numbers                                            |
+| baseOutline  | Outer base color                                        |
+| bp           | Base-pair                                               |
+| nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  |
+"""
+
+OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+"""Boolean option list
+
+| Name              | Option                                                                                                                                        | Default |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| autoHelices       | Annotates each and every helix in the RNA with a unique `Hn` label                                                                            | False   |
+| autoInteriorLoops | Annotates each and every interior loop of the RNA with a unique `In` label                                                                    | False   |
+| autoTerminalLoops | Annotates each and every terminal loop of the RNA with a unique `Tn` label                                                                    | False   |
+| drawBackbone      | Backbone drawing                                                                                                                              | True    |
+| drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
+| drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
+| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
+| fillBases         | Fill bases                                                                                                                                    | True    |
+| flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
+
+__See Also:__ [VARNA.toggle_options][varnaapi.VARNA.toggle_options]
+
+[^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
+"""
+
+NUMERIC_PARAMS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
+"""Allowed numeric parameters
+
+| Label             | Type  | Description                                                                                                                                                                                                    |
+|-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      |
+| periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` |
+| resolution        | float | Chooses the resolution of a bitmap export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           |
+| rotation          | float | Rotates the whole RNA of a certain angular increment                                                                                                                                                           |
+| spaceBetweenBases | float | Sets the distance between consecutive bases                                                                                                                                                                    |
+| zoom              | float | Defines the level of zoom and zoom increment used to display the RNA within this panel                                                                                                                         |
+"""
+
+BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
+"""Allowed options for base-pair style
+
+| Label  | Description                                                                                            |
+|--------|--------------------------------------------------------------------------------------------------------|
+| none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures            |
+| simple | A simple line is used to draw any base-pair, regardless of its type                                    |
+| rnaviz | A small square is drawn at equal distance of the two partners                                          |
+| lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
+
+__See Also:__ [VARNA.set_bp_style][varnaapi.VARNA.set_bp_style]
+
+"""
 
 PARENTHESES_SYSTEMS = [
     ("(", ")"),
@@ -24,11 +83,32 @@ PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
 
 class BasesStyle:
+    """Defines a custom base-style, to be applied later to a set of bases.
+    A BasesStyle style contains colors used for different components of a base.
+    See [\_\_init\_\_][varnaapi.BasesStyle.\_\_init\_\_] for more details.
+
+    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
+    """
     def __init__(self, fill=None, outline=None, label=None, number=None):
+        """Basesstyle constructor from given colors for different components.
+        At least one argument should be given.
+
+        Args:
+            fill (Hex): color of inner part of base
+            outline (Hex): color of outline of base
+            label (Hex): base text color
+            number (Hex): base number color
+
+        Examples:
+            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
+        """
         self.color = {}
         self.update(fill, outline, label, number)
 
     def update(self, fill=None, outline=None, label=None, number=None):
+        """Update component colors.
+        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.\_\_init\_\_]
+        """
         if fill is None and outline is None and label is None and number is None:
             raise Exception("At least one should not be None")
         if fill is not None:
@@ -99,13 +179,25 @@ def _parse_vienna(ss):
 class VARNA:
     """VARNA object
     """
-    def __init__(self, seq=None, structure=None):
-        """Test
+    def __init__(self, seq:str=None, structure=None):
+        """Constructor from given RNA sequence or/and secondary structure.
+        If sequence and structure have different size, the larger one is used
+        and ` `s or `.`s will be added to sequence or structure to complement.
+
+        Args:
+            seq: Raw nucleotide sequence for the displayed RNA.
+                 Each base must be encoded in a single character.
+                 Letters others than `A`, `C`, `G`, `U` and space are tolerated.
+            structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
+
+              - Dot-Bracket Notation (DBN)
+              - List of pair of int representing a list of base-pairs
+              - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
+
         """
         self.length = -1
         self.structure = []
         self.sequence = ""
-        self.dbn = None
         self.aux_BPs = []
         self.highlight_regions = []
         self.params = {'algorithm': "naview"}
@@ -202,22 +294,8 @@ class VARNA:
         """Set default color used for different objects in the panel.
 
         Args:
-            **kwargs: See below for the list of allowed keywords.
-                      Value of a keyword is the default color, in Hex color codes, used for the related object.
-
-
-        __Keywords:__
-
-        | Name         | Object in panel                                         |
-        |--------------|---------------------------------------------------------|
-        | backbone     | phosphate-sugar backbone (aka skeleton) of the RNA      |
-        | background   | background color used within the panel                  |
-        | baseInner    | inner base color                                        |
-        | baseName     | nucleotide name                                         |
-        | baseNum      | base numbers                                            |
-        | baseOutline  | outer base color                                        |
-        | bp           | base-pair                                               |
-        | nsBasesColor | non-standard bases (Anything but `A`, `C`, `G` or `U`)  |
+            **kwargs (dict): See [DEFAULT_COLOR_LIST][varnaapi.DEFAULT_COLOR_LIST] for the list of allowed keywords.
+                Value of a keyword is the default color, in Hex color codes, used for the related object.
 
         Examples:
             >>> set_default_color({'backbone': '#000000', 'bp':'#FFFF00'})
@@ -233,26 +311,9 @@ class VARNA:
         """Enable or disable options of drawing
 
         Args:
-            **kwargs: See below for detailed option lists.
+            **kwargs (dict): See [OPTIONS][varnaapi.OPTIONS] for detailed option lists.
                       Value of keyword is either `True` or `False`
 
-        __Keywords:__
-
-        Default value is set while [VARNA] object is created.
-
-        | Name              | Option                                                                                                                                        | Default |
-        |-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|---------|
-        | autoHelices       | Annotates each and every helix in the RNA with a unique `Hn` label                                                                            | False   |
-        | autoInteriorLoops | Annotates each and every interior loop of the RNA with a unique `In` label                                                                    | False   |
-        | autoTerminalLoops | Annotates each and every terminal loop of the RNA with a unique `Tn` label                                                                    | False   |
-        | drawBackbone      | Backbone drawing                                                                                                                              | True    |
-        | drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
-        | drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
-        | drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
-        | fillBases         | Fill bases                                                                                                                                    | True    |
-        | flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
-
-        [^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
 
         """
         for key, value in kwargs.items():
@@ -263,8 +324,16 @@ class VARNA:
         self.options = kwargs
 
     def set_numeric_params(self, **kwargs):
+        """Change value of numeric parameters in one function.
+        This is equivalent to use setting function of each parameter,
+        such as [set_bp_increment][varnaapi.VARNA.set_bp_increment].
+
+        Args:
+            **kwargs (dict): See [NUMERIC_PARAMS][varnaapi.NUMERIC_PARAMS] for allowed keywords.
+
+        """
         for key, value in kwargs.items():
-            if key not in NUMERIC_OPTIONS:
+            if key not in NUMERIC_PARAMS:
                 raise Exception("{} is not a valid keyword".format(key))
             assert_is_number(value)
             if key == "periodNum":
@@ -273,6 +342,8 @@ class VARNA:
                 self.params[key] = float(value)
 
     def format_structure(self):
+        """Return secondary structure in dot-brackaet notation
+        """
         def greedy_fill(c1, c2, res, ss, i, j):
             if i <= j:
                 k = ss[i]
@@ -312,27 +383,45 @@ class VARNA:
         self.params['border'] = "\"{}\"".format(border)
 
     def set_bp_style(self, style:str):
-        """Set default style for base-pairs rendering, chosen among:
-
-        | Label  | Description                                                                                            |
-        |--------|--------------------------------------------------------------------------------------------------------|
-        | none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures            |
-        | line   | A simple line is used to draw any base-pair, regardless of its type                                    |
-        | rnaviz | A small square is drawn at equal distance of the two partners                                          |
-        | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
+        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.BP_STYLES]
 
         __Note:__ `lw` is set by default
+
+        Example:
+            >>> varna.set_bp_style("simple")
         """
-        if style not in ['none', 'line', 'rnaviz', 'lw']:
-            raise Exception('Should be one of none, line, rnaviz or lw')
+        if style not in BP_STYLES:
+            raise Exception('Should be one of {}'.format(BP_STYLES))
         self.params['bpStyle'] = style
 
-    def set_bp_increment(self, value):
+    def set_bp_increment(self, value:float):
+        """In linear drawing mode, defines the vertical increment used to
+        separate two successive, nested base-pairs.
+
+        Example:
+            >>> varna.set_bp_increment(1.2)
+        """
         assert_is_number('value', value)
         self.params['bpIncrement'] = float(value)
 
 
-    def add_bases_style(self, style, bases):
+    def add_bases_style(self, style:BasesStyle, bases:list):
+        """Apply a [BasesStyle][varnaapi.BasesStyle] to a list of positions.
+        If a position is assigned to more than one styles,
+        one of them will be randomly used.
+
+        Args:
+            style: Style to apply
+            bases: List of 0-indexed positions
+
+        Examples:
+            >>> style1 = BasesStyle(fill="#FF0000")
+            >>> style2 = BasesStyle(fill="#FFFF00" outline="#00FF00")
+            >>> varna.add_bases_style(style1, [0,2,4])
+            >>> varna.add_bases_style(setye1, [10,11,12])
+            >>> varna.aff_bases_style(style2, [4,5,6,7])
+
+        """
         if not isinstance(style, BasesStyle):
             raise Exception("style should be BasesStyle object")
         if len(bases) > 0:
@@ -389,7 +478,6 @@ class VARNA:
         cmd = self._gen_command()
         print(cmd)
         os.popen(cmd).close()
-
 
     def __repr__(self):
         return repr((self.format_structure(),self.sequence))

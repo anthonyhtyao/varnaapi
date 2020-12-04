@@ -1,0 +1,6 @@
+__pycache__
+*.pyc
+*.png
+*.svg
+site
+build

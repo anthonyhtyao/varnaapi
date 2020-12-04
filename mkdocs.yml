@@ -8,11 +8,17 @@ theme:
 nav:
   - Overview: index.md
   - API: varnaapi.md
+  - VARNA: varna.md
 
 plugins:
   - search
   - mkdocstrings:
-      default_handler: python
+      handlers:
+        python:
+          selection:
+            filters:
+              - "!^_"
+              - "^__init__$"
       watch:
         - varnaapi.py
 
