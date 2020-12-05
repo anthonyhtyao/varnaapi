@@ -1,5 +1,6 @@
 import re
 import os
+import abc
 from string import ascii_lowercase, ascii_uppercase
 from typing import Union
 
@@ -127,6 +128,68 @@ class BasesStyle:
         return ",".join(lst)
 
 
+class _Annotation:
+    def __init__(self, text, type, color="#000000", size=10):
+        self.text = text
+        self.type = type
+        self.color = color
+        self.size = size
+
+    def asdict(self):
+        return {'text': self.text, 'type': self.type, 'color': self.color,
+                'size': self.size}
+
+    @abc.abstractmethod
+    def to_cmd(self):
+        pass
+
+
+class _ObjectAnnotation(_Annotation):
+    def __init__(self, text, type, anchor, color="#000000", size=10):
+        super().__init__(text, type, color, size)
+        self.anchor = anchor
+
+    def asdict(self):
+        d = super().asdict()
+        d['anchor'] = self.anchor
+        return d
+
+    def to_cmd(self):
+        return "{text}:type={type},anchor={anchor},color={color},size={size}"\
+            .format(**self.asdict())
+
+
+class BaseAnnotation(_ObjectAnnotation):
+    def __init__(self, text, anchor, color="#000000", size=10):
+        super().__init__(text, 'B', color, size)
+
+
+class LoopAnnotation(_ObjectAnnotation):
+    def __init__(self, text, anchor, color="#000000", size=10):
+        super().__init__(text, 'L', anchor, color, size)
+
+
+class HelixAnnotation(_ObjectAnnotation):
+    def __init__(self, text, anchor, color="#000000", size=10):
+        super().__init__(text, 'H', anchor, color, size)
+
+
+class StaticAnnotation(_Annotation):
+    def __init__(self, text, x, y, color="#000000", size=10):
+        super().__init__(text, 'P', color, size)
+        self.x = x
+        self.y = y
+
+    def asdict(self):
+        d = super().asdict()
+        d['x'] = self.x
+        d['y'] = self.y
+        return d
+
+    def to_cmd(self):
+        return "{text}:type={type},x={x},y={y},color={color},size={size}"\
+            .format(**self.asdict())
+
 def is_hex_color(color):
     match = HEX.search(color)
     if match:
@@ -202,6 +265,7 @@ class VARNA:
         self.options = {}
         self.title = None
         self.bases_styles = {}
+        self.annotations = []
 
         if structure is not None:
             if isinstance(structure, list):
@@ -424,6 +488,13 @@ class VARNA:
         if len(bases) > 0:
             self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
 
+
+    def add_annotation(self, annotation):
+        # Assert is annotation
+        if not isinstance(annotation, _Annotation):
+            raise Exception("Should be a valid annotation object")
+        self.annotations.append(annotation)
+
     def _gen_command(self):
         """
         Return command to run VARNA
@@ -464,6 +535,9 @@ class VARNA:
         for ind, (style, bases) in enumerate(self.bases_styles.items()):
             cmd += " -basesStyle{} {}".format(ind+1, str(style))
             cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
+
+        # Annotations
+        cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
 
         return cmd
 
