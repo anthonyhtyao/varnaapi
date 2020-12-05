@@ -285,14 +285,7 @@ class VARNA:
         self.length = -1
         self.structure = []
         self.sequence = ""
-        self.aux_BPs = []
-        self.highlight_regions = []
-        self.params = {'algorithm': "naview"}
-        self.default_color = {}
-        self.options = {}
-        self.title = None
-        self.bases_styles = {}
-        self.annotations = []
+        self._init_features()
 
         if structure is not None:
             if isinstance(structure, list):
@@ -316,6 +309,15 @@ class VARNA:
         self.sequence += " "*(self.length-len(self.sequence))
         self.structure += [-1]*(self.length-len(self.structure))
 
+    def _init_features(self):
+        self.aux_BPs = []
+        self.highlight_regions = []
+        self.params = {'algorithm': "naview"}
+        self.default_color = {}
+        self.options = {}
+        self.title = None
+        self.bases_styles = {}
+        self.annotations = []
 
     def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='#0000FF', thickness:float=1.0):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
@@ -534,7 +536,10 @@ class VARNA:
         Return command to run VARNA
         """
         cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(VARNA_PATH)
-        cmd += " -sequenceDBN \"{}\" -structureDBN \"{}\" -o {}".format(self.sequence, self.format_structure(), self.output)
+
+        cmd += self._gen_input_cmd()
+
+        cmd += " -o {}".format(self.output)
 
         # Command for defualt colors
         for key, color in self.default_color.items():
@@ -571,9 +576,14 @@ class VARNA:
             cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
 
         # Annotations
-        cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
+        if len(self.annotations) > 0:
+            cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
 
         return cmd
+
+
+    def _gen_input_cmd(self):
+        return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.format_structure())
 
     def savefig(self, output):
         """
@@ -586,3 +596,33 @@ class VARNA:
 
     def __repr__(self):
         return repr((self.format_structure(),self.sequence))
+
+
+class Comparison(VARNA):
+    def __init__(self, seq1, structure1, seq2, structure2):
+        """Drawing of two aligned RNAs.
+        Unlike classic [VARNA][varnaapi.VARNA.\_\_init\_\_] mode,
+        both sequences and structures __MUST__ be specified and have the same size.
+        Additionally, the merged secondary structures must currently be without any crossing
+        interactions (e.g. pseudoknots), and merging them should give a secondary structure.
+        Gap character is `.`.
+        Args:
+            seq1 (str): Sets the gapped nucleotide sequence for the first RNA sequence
+            structure1 (str): Sets the first secondary structure in Dot-Bracket Notation
+            seq2 (str): Sets the gapped nucleotide sequence for the second sequence
+            strcuture2 (str): Sets the second secondary structure in Doc-Bracket Notation
+        """
+        if not (len(seq1) == len(structure1) == len(seq2) == len(structure2)):
+            raise Exception("All length should be equal")
+        self.seq1 = seq1
+        self.structure1 = structure1
+        self.seq2 = seq2
+        self.structure2 = structure2
+        self.length = len(seq1)
+        self._init_features()
+
+    def _gen_input_cmd(self):
+        return " -comparisonMode True -firstSequence \"{}\" -firstStructure \"{}\" -secondSequence \"{}\" -secondStructure \"{}\"".format(self.seq1, self.structure1, self.seq2, self.structure2)
+
+    def __repr__(self):
+        return repr((self.seq1, self.structure1, self.seq2, self.structure2))
