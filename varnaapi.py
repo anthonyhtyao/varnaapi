@@ -266,8 +266,6 @@ def _parse_vienna(ss):
     return res
 
 class VARNA:
-    """VARNA object
-    """
     def __init__(self, seq:str=None, structure=None):
         """Constructor from given RNA sequence or/and secondary structure.
         If sequence and structure have different size, the larger one is used
@@ -319,7 +317,7 @@ class VARNA:
         self.structure += [-1]*(self.length-len(self.structure))
 
 
-    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color:str='#0000FF', thickness:float=1.0):
+    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='#0000FF', thickness:float=1.0):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -328,7 +326,7 @@ class VARNA:
             edge5: Edge 5' used for interaction in non-canonical base-pairs, as defined by the Leontis/Westhof classification of base-pairs. Admissible values are __wc__ (Watson/Crick edge), __h__ (Hoogsteen edge) and __s__ (Sugar edge).
             edge3: Edge 3' used for interaction in non-canonical base-pairs. Admissible values are __wc__, __h__ and __s__.
             stericity: Orientation of the strands. Admissible values are __cis__ and __trans__
-            color: Base-pair color in Hex color codes
+            color (Hex): Base-pair color in Hex color codes
             thickness: Base-pair thickness
         """
         assert_valid_interval(self.length, i, j)
@@ -343,7 +341,7 @@ class VARNA:
 
         self.aux_BPs.append((i+1, j+1, color, thickness, edge5, edge3, stericity))
 
-    def add_highlight_region(self, i:int, j:int, radius:float=15.0, fill:str="#9999FF", outline:str="#3333FF"):
+    def add_highlight_region(self, i:int, j:int, radius:float=15.0, fill="#9999FF", outline="#3333FF"):
         """Highlights a region by drawing a polygon of predefined radius,
         fill color and outline color around it.
         A region consists in an interval from base `i` to base `j`.
@@ -352,8 +350,8 @@ class VARNA:
             i: 5'-end of the highlight
             j: 3'-end of the highlight
             radius: Thickness of the highlight
-            fill: The color used to fill the highlight
-            outline: The color used to draw the line around the highlight
+            fill (Hex): The color used to fill the highlight
+            outline (Hex): The color used to draw the line around the highlight
         """
         assert_valid_interval(self.length, i, j)
         fill = assert_hex_color(fill)
