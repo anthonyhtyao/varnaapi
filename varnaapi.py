@@ -285,14 +285,7 @@ class VARNA:
         self.length = -1
         self.structure = []
         self.sequence = ""
-        self.aux_BPs = []
-        self.highlight_regions = []
-        self.params = {'algorithm': "naview"}
-        self.default_color = {}
-        self.options = {}
-        self.title = None
-        self.bases_styles = {}
-        self.annotations = []
+        self._init_features()
 
         if structure is not None:
             if isinstance(structure, list):
@@ -316,6 +309,15 @@ class VARNA:
         self.sequence += " "*(self.length-len(self.sequence))
         self.structure += [-1]*(self.length-len(self.structure))
 
+    def _init_features(self):
+        self.aux_BPs = []
+        self.highlight_regions = []
+        self.params = {'algorithm': "naview"}
+        self.default_color = {}
+        self.options = {}
+        self.title = None
+        self.bases_styles = {}
+        self.annotations = []
 
     def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='#0000FF', thickness:float=1.0):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
@@ -534,7 +536,10 @@ class VARNA:
         Return command to run VARNA
         """
         cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(VARNA_PATH)
-        cmd += " -sequenceDBN \"{}\" -structureDBN \"{}\" -o {}".format(self.sequence, self.format_structure(), self.output)
+
+        cmd += self._gen_input_cmd()
+
+        cmd += " -o {}".format(self.output)
 
         # Command for defualt colors
         for key, color in self.default_color.items():
@@ -571,9 +576,14 @@ class VARNA:
             cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
 
         # Annotations
-        cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
+        if len(self.annotations) > 0:
+            cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
 
         return cmd
+
+
+    def _gen_input_cmd(self):
+        return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.format_structure())
 
     def savefig(self, output):
         """
