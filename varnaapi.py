@@ -129,11 +129,13 @@ class BasesStyle:
 
 
 class _Annotation:
+    """Basic Annotation
+    """
     def __init__(self, text, type, color="#000000", size=10):
         self.text = text
         self.type = type
         self.color = color
-        self.size = size
+        self.size = size #: int: font size
 
     def asdict(self):
         return {'text': self.text, 'type': self.type, 'color': self.color,
@@ -160,22 +162,49 @@ class _ObjectAnnotation(_Annotation):
 
 
 class BaseAnnotation(_ObjectAnnotation):
-    def __init__(self, text, anchor, color="#000000", size=10):
+    def __init__(self, text:str, anchor:int, color="#000000", size=10):
+        """Annoation on a base.
+
+        Args:
+            text: Annotation caption
+            anchor: Index of base to annotate
+            color (Hex): Annotation color
+            size (int): Font size
+        """
         super().__init__(text, 'B', color, size)
 
 
 class LoopAnnotation(_ObjectAnnotation):
+    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
+    Argument `anchor` can be index of any base in the loop of interest.
+    """
     def __init__(self, text, anchor, color="#000000", size=10):
         super().__init__(text, 'L', anchor, color, size)
 
 
 class HelixAnnotation(_ObjectAnnotation):
+    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
+    Argument `anchor` can be index of any base in the helix of interest.
+    """
     def __init__(self, text, anchor, color="#000000", size=10):
         super().__init__(text, 'H', anchor, color, size)
 
 
 class StaticAnnotation(_Annotation):
     def __init__(self, text, x, y, color="#000000", size=10):
+        """Annotation on a specified position in VARNA drawing.
+        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
+        However, arguments `x` and `y` are needed to specify annotation position.
+
+        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
+
+        Args:
+            x (int): x-coordinate of position
+            y (int): y-ccordinate of position
+
+        Examples:
+            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
+        """
         super().__init__(text, 'P', color, size)
         self.x = x
         self.y = y
@@ -489,7 +518,10 @@ class VARNA:
             self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
 
 
-    def add_annotation(self, annotation):
+    def add_annotation(self, annotation:_Annotation):
+        """Add an annotation.
+        Argument should be a valid [Annotation](/annotation/) object
+        """
         # Assert is annotation
         if not isinstance(annotation, _Annotation):
             raise Exception("Should be a valid annotation object")

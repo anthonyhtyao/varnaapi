@@ -8,6 +8,7 @@ theme:
 nav:
   - Overview: index.md
   - API: varnaapi.md
+  - Annotation: annotation.md
   - VARNA: varna.md
 
 plugins:
@@ -19,6 +20,8 @@ plugins:
             filters:
               - "!^_"
               - "^__init__$"
+          rendering:
+            show_root_toc_entry: False
       watch:
         - varnaapi.py
 
