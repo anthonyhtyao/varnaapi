@@ -600,6 +600,18 @@ class VARNA:
 
 class Comparison(VARNA):
     def __init__(self, seq1, structure1, seq2, structure2):
+        """Drawing of two aligned RNAs.
+        Unlike classic [VARNA][varnaapi.VARNA.\_\_init\_\_] mode,
+        both sequences and structures __MUST__ be specified and have the same size.
+        Additionally, the merged secondary structures must currently be without any crossing
+        interactions (e.g. pseudoknots), and merging them should give a secondary structure.
+        Gap character is `.`.
+        Args:
+            seq1 (str): Sets the gapped nucleotide sequence for the first RNA sequence
+            structure1 (str): Sets the first secondary structure in Dot-Bracket Notation
+            seq2 (str): Sets the gapped nucleotide sequence for the second sequence
+            strcuture2 (str): Sets the second secondary structure in Doc-Bracket Notation
+        """
         if not (len(seq1) == len(structure1) == len(seq2) == len(structure2)):
             raise Exception("All length should be equal")
         self.seq1 = seq1
