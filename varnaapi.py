@@ -596,3 +596,21 @@ class VARNA:
 
     def __repr__(self):
         return repr((self.format_structure(),self.sequence))
+
+
+class Comparison(VARNA):
+    def __init__(self, seq1, structure1, seq2, structure2):
+        if not (len(seq1) == len(structure1) == len(seq2) == len(structure2)):
+            raise Exception("All length should be equal")
+        self.seq1 = seq1
+        self.structure1 = structure1
+        self.seq2 = seq2
+        self.structure2 = structure2
+        self.length = len(seq1)
+        self._init_features()
+
+    def _gen_input_cmd(self):
+        return " -comparisonMode True -firstSequence \"{}\" -firstStructure \"{}\" -secondSequence \"{}\" -secondStructure \"{}\"".format(self.seq1, self.structure1, self.seq2, self.structure2)
+
+    def __repr__(self):
+        return repr((self.seq1, self.structure1, self.seq2, self.structure2))
