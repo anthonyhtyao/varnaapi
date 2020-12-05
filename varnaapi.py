@@ -267,7 +267,7 @@ def _parse_vienna(ss):
 
 class VARNA:
     def __init__(self, seq:str=None, structure=None):
-        """Constructor from given RNA sequence or/and secondary structure.
+        """Classis VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
         If sequence and structure have different size, the larger one is used
         and ` `s or `.`s will be added to sequence or structure to complement.
 
@@ -601,7 +601,7 @@ class VARNA:
 class Comparison(VARNA):
     def __init__(self, seq1, structure1, seq2, structure2):
         """Drawing of two aligned RNAs.
-        Unlike classic [VARNA][varnaapi.VARNA.\_\_init\_\_] mode,
+        Unlike classic [VARNA][varnaapi.VARNA] mode,
         both sequences and structures __MUST__ be specified and have the same size.
         Additionally, the merged secondary structures must currently be without any crossing
         interactions (e.g. pseudoknots), and merging them should give a secondary structure.
