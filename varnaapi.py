@@ -509,7 +509,7 @@ class VARNA:
             >>> style2 = BasesStyle(fill="#FFFF00" outline="#00FF00")
             >>> varna.add_bases_style(style1, [0,2,4])
             >>> varna.add_bases_style(setye1, [10,11,12])
-            >>> varna.aff_bases_style(style2, [4,5,6,7])
+            >>> varna.add_bases_style(style2, [4,5,6,7])
 
         """
         if not isinstance(style, BasesStyle):
@@ -521,6 +521,10 @@ class VARNA:
     def add_annotation(self, annotation:_Annotation):
         """Add an annotation.
         Argument should be a valid [Annotation](/annotation/) object
+
+        Examples:
+            >>> a = LoopAnnotation("L1", 6, color="#FF00FF")
+            >>> varna.add_annotation(a)
         """
         # Assert is annotation
         if not isinstance(annotation, _Annotation):
