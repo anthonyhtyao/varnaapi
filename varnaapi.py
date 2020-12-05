@@ -518,7 +518,7 @@ class VARNA:
 
     def add_annotation(self, annotation:_Annotation):
         """Add an annotation.
-        Argument should be a valid [Annotation](/annotation/) object
+        Argument should be a valid [Annotation](annotation.md) object
 
         Examples:
             >>> a = LoopAnnotation("L1", 6, color="#FF00FF")
