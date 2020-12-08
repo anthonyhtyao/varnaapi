@@ -153,7 +153,7 @@ class _ObjectAnnotation(_Annotation):
 
     def asdict(self):
         d = super().asdict()
-        d['anchor'] = self.anchor
+        d['anchor'] = self.anchor + 1
         return d
 
     def to_cmd(self):
@@ -171,7 +171,7 @@ class BaseAnnotation(_ObjectAnnotation):
             color (Hex): Annotation color
             size (int): Font size
         """
-        super().__init__(text, 'B', color, size)
+        super().__init__(text, 'B', anchor, color, size)
 
 
 class LoopAnnotation(_ObjectAnnotation):
@@ -312,7 +312,7 @@ class VARNA:
     def _init_features(self):
         self.aux_BPs = []
         self.highlight_regions = []
-        self.params = {'algorithm': "naview"}
+        self.params = {'algorithm': "radiate"}
         self.default_color = {}
         self.options = {}
         self.title = None
@@ -366,7 +366,7 @@ class VARNA:
         """Set algorithm other than __naview__ to draw secondary structure.
         Supported options are __line__, __circular__, __radiate__ and __naview__.
         """
-        if algo not in ['line', ' circular', 'radiate', 'naview']:
+        if algo not in ['line', 'circular', 'radiate', 'naview']:
             raise Exception("Sould be one of line, circular, radiate or naview")
         self.params['algorithm'] = algo
 
@@ -378,7 +378,7 @@ class VARNA:
 
     def set_zoom_level(self, level:float):
         """Defines the level of zoom and zoom increment used to display the RNA within this panel"""
-        self.param['zoom'] = level
+        self.params['zoom'] = level
 
     def set_default_color(self, **kwargs):
         """Set default color used for different objects in the panel.
@@ -425,7 +425,7 @@ class VARNA:
         for key, value in kwargs.items():
             if key not in NUMERIC_PARAMS:
                 raise Exception("{} is not a valid keyword".format(key))
-            assert_is_number(value)
+            assert_is_number(key, value)
             if key == "periodNum":
                 self.params['periodNum'] = int(value)
             else:
@@ -544,7 +544,7 @@ class VARNA:
         # Command for defualt colors
         for key, color in self.default_color.items():
             if color is not None:
-                cmd += " -{} {}".format(key, color)
+                cmd += " -{} \"{}\"".format(key, color)
 
         # Options
         for key, value in self.options.items():
@@ -626,3 +626,108 @@ class Comparison(VARNA):
 
     def __repr__(self):
         return repr((self.seq1, self.structure1, self.seq2, self.structure2))
+
+
+class Motif(VARNA):
+    def __init__(self, motif, sequence=None):
+        """Special class for motif drawing.
+        A motif is a rooted ordered tree, similar to a secondary structure,
+        but whose leaves may represent base paired positions, named open base
+        pairs or open paired leaves and denoted by `(*)`, and the root always
+        represents a closing base pair. A motif can also be seen as an union
+        of consecutive loops. The figure below represents `((*)(*)(((*)(*))))`.
+
+        Motif class inherits from [VARNA][varnaapi.VARNA] with some pre-set
+        parameters.
+
+        - rotation is set at `180`
+        - default base pair style is `simple`
+        - base number is hidden by setting default color to white
+        (default background color)
+
+        A dummy base pair is added after each open base pair and in front of
+        the root, as shown in the figure below.
+        Therefore, the index of bases is changed after creating the object.
+        For example, the index of first base of root is `1` instead of `0`.
+        The default bases style for root is
+        `BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")` and
+        `BasesStyle(fill="#DDDDDD", outline="#FFFFFF", number="#FFFFFF")` for
+        dummy bases. One can change them using
+        [set_root_bases_style][varnaapi.Motif.set_root_bases_style] and
+        [set_dummy_bases_style][varnaapi.Motif.set_dummy_bases_style].
+
+        Args:
+            motif (str): Motif in Dot-Bracket Notation.
+                `(*)` is used to represent open base pair.
+            sequence (str): Chain of characters for motif. Note that sequence
+                should exactly match with motif, _i.e._ Equal length and same
+                positions for all `*`.
+
+        """
+        seq = ""
+        struct = ""
+        extra_bps = []
+        pos = 0
+        for i in range(len(motif)):
+            c = motif[i]
+            if c=="*":
+                if sequence is not None and not sequence[i] == '*':
+                    raise Exception("Motif and sequence are not compatible at position {}".format(i))
+                extra_bps.append((pos + 1, pos + 2))
+                seq += " & "
+                struct += "(&)"
+                pos += 2
+            else:
+                if sequence is not None:
+                    w = sequence[i]
+                else:
+                    w = " "
+                if w == '*':
+                    raise Exception("Motif and sequence are not compatible at position {}".format(i))
+                seq += w
+                struct += c
+                pos += 1
+        seq = " " + seq + " "
+        struct = "(" + struct + ")"
+        self.sequence = seq
+        self.structure = struct
+        self.length = pos + 2
+        extra_bps.append((0, self.length - 1))
+        self.extra_bps = extra_bps
+
+        self._init_features()
+        # Default Bases Styles
+        self.rootBasesStyle = BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")
+        self.dummyBasesStyle = BasesStyle(fill="#DDDDDD", outline="#FFFFFF", number="#FFFFFF")
+
+        self.default_color['baseNum'] = "#FFFFFF"
+        self.params['bpStyle'] = 'simple'
+        self.params['rotation'] = 180
+
+    def _gen_input_cmd(self):
+        return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.structure)
+
+    def set_dummy_bases_style(self, style):
+        """Set style for dummy bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """
+        if not isinstance(style, BasesStyle):
+            raise Exception('The argument should be BasesStyle object')
+        self.dummyBasesStyle = style
+
+    def set_root_bases_style(self, style):
+        """Set style for root bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """
+        if not isinstance(style, BasesStyle):
+            raise Exception('The argument should be BasesStyle object')
+        self.rootBasesStyle = style
+
+    def savefig(self, output):
+        dummybps = []
+        for (i,j) in self.extra_bps:
+            dummybps += [i, j]
+            self.add_aux_BP(i=i, j=j, color="#DDDDDD", thickness=1)
+        self.add_aux_BP(i=1, j=self.length-2, color="#000000", thickness=2)
+
+        self.add_bases_style(self.rootBasesStyle, [1, self.length-2])
+        self.add_bases_style(self.dummyBasesStyle, dummybps)
+        super().savefig(output)
