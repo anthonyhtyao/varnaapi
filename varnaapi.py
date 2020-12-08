@@ -626,3 +626,60 @@ class Comparison(VARNA):
 
     def __repr__(self):
         return repr((self.seq1, self.structure1, self.seq2, self.structure2))
+
+
+class Motif(VARNA):
+    def __init__(self, motif, sequence=None):
+        seq = ""
+        struct = ""
+        extra_bps = []
+        pos = 0
+        for c in motif:
+            if c=="*":
+                extra_bps.append((pos+1,pos+2))
+                seq += " & "
+                struct += "(&)"
+                pos += 2
+            else:
+                seq += " "
+                struct += c
+                pos += 1
+        seq = " "+seq+" "
+        struct = "("+struct+")"
+        self.sequence = seq
+        self.structure = struct
+        self.length = pos + 2
+        extra_bps.append((0, self.length-1))
+        self.extra_bps = extra_bps
+        self._init_features()
+        # Default Bases Styles
+        self.rootBasesStyle = BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")
+        self.dummyBasesStyle = BasesStyle(fill="#DDDDDD", outline="#FFFFFF", number="#FFFFFF")
+
+        self.default_color['baseNum'] = "#FFFFFF"
+        self.params['bpStyle'] = 'simple'
+        self.params['rotation'] = 180
+
+    def _gen_input_cmd(self):
+        return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.structure)
+
+    def set_dummy_bases_style(self, style):
+        if not isinstance(style, BasesStyle):
+            raise Exception('The argument should be BasesStyle object')
+        self.dummyBasesStyle = style
+
+    def set_root_bases_style(self, style):
+        if not isinstance(style, BasesStyle):
+            raise Exception('The argument should be BasesStyle object')
+        self.rootBasesStyle = style
+
+    def savefig(self, output):
+        dummybps = []
+        for (i,j) in self.extra_bps:
+            dummybps += [i, j]
+            self.add_aux_BP(i=i, j=j, color="#DDDDDD", thickness=1)
+        self.add_aux_BP(i=1, j=self.length-2, color="#000000", thickness=2)
+
+        self.add_bases_style(self.rootBasesStyle, [1, self.length-2])
+        self.add_bases_style(self.dummyBasesStyle, dummybps)
+        super().savefig(output)
