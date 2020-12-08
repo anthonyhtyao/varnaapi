@@ -630,6 +630,40 @@ class Comparison(VARNA):
 
 class Motif(VARNA):
     def __init__(self, motif, sequence=None):
+        """Special class for motif drawing.
+        A motif is a rooted ordered tree, similar to a secondary structure,
+        but whose leaves may represent base paired positions, named open base
+        pairs or open paired leaves and denoted by `(*)`, and the root always
+        represents a closing base pair. A motif can also be seen as an union
+        of consecutive loops. The figure below represents `((*)(*)(((*)(*))))`.
+
+        Motif class inherits from [VARNA][varnaapi.VARNA] with some pre-set
+        parameters.
+
+        - rotation is set at `180`
+        - default base pair style is `simple`
+        - base number is hidden by setting default color to white
+        (default background color)
+
+        A dummy base pair is added after each open base pair and in front of
+        the root, as shown in the figure below.
+        Therefore, the index of bases is changed after creating the object.
+        For example, the index of first base of root is `1` instead of `0`.
+        The default bases style for root is
+        `BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")` and
+        `BasesStyle(fill="#DDDDDD", outline="#FFFFFF", number="#FFFFFF")` for
+        dummy bases. One can change them using
+        [set_root_bases_style][varnaapi.Motif.set_root_bases_style] and
+        [set_dummy_bases_style][varnaapi.Motif.set_dummy_bases_style].
+
+        Args:
+            motif (str): Motif in Dot-Bracket Notation.
+                `(*)` is used to represent open base pair.
+            sequence (str): Chain of characters for motif. Note that sequence
+                should exactly match with motif, _i.e._ Equal length and same
+                positions for all `*`.
+
+        """
         seq = ""
         struct = ""
         extra_bps = []
@@ -674,11 +708,15 @@ class Motif(VARNA):
         return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.structure)
 
     def set_dummy_bases_style(self, style):
+        """Set style for dummy bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """
         if not isinstance(style, BasesStyle):
             raise Exception('The argument should be BasesStyle object')
         self.dummyBasesStyle = style
 
     def set_root_bases_style(self, style):
+        """Set style for root bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """
         if not isinstance(style, BasesStyle):
             raise Exception('The argument should be BasesStyle object')
         self.rootBasesStyle = style
