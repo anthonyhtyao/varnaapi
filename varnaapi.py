@@ -153,7 +153,7 @@ class _ObjectAnnotation(_Annotation):
 
     def asdict(self):
         d = super().asdict()
-        d['anchor'] = self.anchor
+        d['anchor'] = self.anchor + 1
         return d
 
     def to_cmd(self):
@@ -171,7 +171,7 @@ class BaseAnnotation(_ObjectAnnotation):
             color (Hex): Annotation color
             size (int): Font size
         """
-        super().__init__(text, 'B', color, size)
+        super().__init__(text, 'B', anchor, color, size)
 
 
 class LoopAnnotation(_ObjectAnnotation):
@@ -378,7 +378,7 @@ class VARNA:
 
     def set_zoom_level(self, level:float):
         """Defines the level of zoom and zoom increment used to display the RNA within this panel"""
-        self.param['zoom'] = level
+        self.params['zoom'] = level
 
     def set_default_color(self, **kwargs):
         """Set default color used for different objects in the panel.
@@ -425,7 +425,7 @@ class VARNA:
         for key, value in kwargs.items():
             if key not in NUMERIC_PARAMS:
                 raise Exception("{} is not a valid keyword".format(key))
-            assert_is_number(value)
+            assert_is_number(key, value)
             if key == "periodNum":
                 self.params['periodNum'] = int(value)
             else:
