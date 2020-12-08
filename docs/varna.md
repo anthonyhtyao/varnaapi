@@ -13,7 +13,7 @@ We offer two python classes [VARNA](#varnaapi.VARNA) and [Comparison](#varnaapi.
       filters: ["!savefig"]
       members: ["Motif"]
 
-![Motif ((*)(*)(((*)(*))))](img/motif_ex.png)
+![Motif ((*)(*)(((*)(*))))](assets/images/motif_ex.png)
 
 <figcaption>Motif ((*)(*)(((*)(*))))</figcaption>
 
