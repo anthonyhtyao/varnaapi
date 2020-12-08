@@ -634,23 +634,33 @@ class Motif(VARNA):
         struct = ""
         extra_bps = []
         pos = 0
-        for c in motif:
+        for i in range(len(motif)):
+            c = motif[i]
             if c=="*":
-                extra_bps.append((pos+1,pos+2))
+                if sequence is not None and not sequence[i] == '*':
+                    raise Exception("Motif and sequence are not compatible at position {}".format(i))
+                extra_bps.append((pos + 1, pos + 2))
                 seq += " & "
                 struct += "(&)"
                 pos += 2
             else:
-                seq += " "
+                if sequence is not None:
+                    w = sequence[i]
+                else:
+                    w = " "
+                if w == '*':
+                    raise Exception("Motif and sequence are not compatible at position {}".format(i))
+                seq += w
                 struct += c
                 pos += 1
-        seq = " "+seq+" "
-        struct = "("+struct+")"
+        seq = " " + seq + " "
+        struct = "(" + struct + ")"
         self.sequence = seq
         self.structure = struct
         self.length = pos + 2
-        extra_bps.append((0, self.length-1))
+        extra_bps.append((0, self.length - 1))
         self.extra_bps = extra_bps
+
         self._init_features()
         # Default Bases Styles
         self.rootBasesStyle = BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")
