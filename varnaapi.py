@@ -312,7 +312,7 @@ class VARNA:
     def _init_features(self):
         self.aux_BPs = []
         self.highlight_regions = []
-        self.params = {'algorithm': "naview"}
+        self.params = {'algorithm': "radiate"}
         self.default_color = {}
         self.options = {}
         self.title = None
@@ -366,7 +366,7 @@ class VARNA:
         """Set algorithm other than __naview__ to draw secondary structure.
         Supported options are __line__, __circular__, __radiate__ and __naview__.
         """
-        if algo not in ['line', ' circular', 'radiate', 'naview']:
+        if algo not in ['line', 'circular', 'radiate', 'naview']:
             raise Exception("Sould be one of line, circular, radiate or naview")
         self.params['algorithm'] = algo
 
@@ -544,7 +544,7 @@ class VARNA:
         # Command for defualt colors
         for key, color in self.default_color.items():
             if color is not None:
-                cmd += " -{} {}".format(key, color)
+                cmd += " -{} \"{}\"".format(key, color)
 
         # Options
         for key, value in self.options.items():
