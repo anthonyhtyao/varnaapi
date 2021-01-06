@@ -1,4 +1,6 @@
-We offer two python classes [VARNA](#varnaapi.VARNA) and [Comparison](#varnaapi.Comparison) corresponding to the classic mode and the comparison mode in VARNA.
+In VARNA API, we offer three Python classes [VARNA](#varnaapi.VARNA), [Comparison](#varnaapi.Comparison), and [Motif](#varnaapi.Motif) for RNA secondary structure visualisation.
+The first two correspond to the classic and the comparison mode in VARNA. The last one is the special case for motif drawing.
+Both [Comparison](#varnaapi.Comparison) and [Motif](#varnaapi.Motif) are inherited classes of [VARNA](#varnaapi.VARNA).
 
 ::: varnaapi
     selection:

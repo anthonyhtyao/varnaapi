@@ -2,11 +2,10 @@ import re
 import os
 import abc
 from string import ascii_lowercase, ascii_uppercase
-from typing import Union
 
+__version__ = '0.1.0'
 
-
-VARNA_PATH="VARNAv3-93.jar"
+_VARNA_PATH="VARNAv3-93.jar"
 HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
 BORDER = re.compile('^\d+x\d+$')
 
@@ -37,9 +36,11 @@ OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbon
 | drawBackbone      | Backbone drawing                                                                                                                              | True    |
 | drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
 | drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
-| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots                                                                                        | False   |
+| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
 | fillBases         | Fill bases                                                                                                                                    | True    |
 | flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
+
+[^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
 
 """
 
@@ -79,11 +80,16 @@ PARENTHESES_SYSTEMS = [
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
+def set_VARNA(path):
+    """Set VARNA location
+    """
+    global _VARNA_PATH
+    _VARNA_PATH = path
 
 class BasesStyle:
     """Defines a custom base-style, to be applied later to a set of bases.
     A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.BasesStyle.\_\_init\_\_] for more details.
+    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
 
     __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
     """
@@ -105,7 +111,7 @@ class BasesStyle:
 
     def update(self, fill=None, outline=None, label=None, number=None):
         """Update component colors.
-        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.\_\_init\_\_]
+        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
         """
         if fill is None and outline is None and label is None and number is None:
             raise Exception("At least one should not be None")
@@ -267,7 +273,7 @@ def _parse_vienna(ss):
 
 class VARNA:
     def __init__(self, seq:str=None, structure=None):
-        """Classis VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
+        """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
         If sequence and structure have different size, the larger one is used
         and ` `s or `.`s will be added to sequence or structure to complement.
 
@@ -535,7 +541,7 @@ class VARNA:
         """
         Return command to run VARNA
         """
-        cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(VARNA_PATH)
+        cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(_VARNA_PATH)
 
         cmd += self._gen_input_cmd()
 
