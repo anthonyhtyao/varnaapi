@@ -11,21 +11,21 @@ BORDER = re.compile('^\d+x\d+$')
 
 DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
                       'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
-"""Allowed options for color setting
+"""Allowed options for basic color setting
 
-| Name         | Object in panel                                         |
-|--------------|---------------------------------------------------------|
-| backbone     | Phosphate-sugar backbone (aka skeleton) of the RNA      |
-| background   | Background color used within the panel                  |
-| baseInner    | Inner base color                                        |
-| baseName     | Nucleotide name                                         |
-| baseNum      | Base numbers                                            |
-| baseOutline  | Outer base color                                        |
-| bp           | Base-pair                                               |
-| nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  |
+| Name         | Object in panel                                         | Default Color |
+|--------------|---------------------------------------------------------|---------|
+| backbone     | Phosphate-sugar backbone (aka skeleton) of the RNA      | <p style='color:#595959'>Cottonwood Gray #595959</p> |
+| background   | Background color used within the panel                  | <p style='background-color:gray;color:#FFFFFF'>White #FFFFFF</p> |
+| baseInner    | Inner base color                                        | <p style='background-color:gray;color:#F2F2F2'>White Smoke #F2F2F2</p> |
+| baseName     | Nucleotide name                                         | <p style='color:#000000'>Black #000000</p> |
+| baseNum      | Base numbers                                            | <p style='color:#3F3F3F'>Vibrant Black #3F3F3F</p> |
+| baseOutline  | Outer base color                                        | <p style='color:#595959'>Cottonwood Gray #595959</p> |
+| bp           | Base-pair color                                         | <p style='color:#0000FF'>Blue #0000FF</p> |
+| nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  | <p style='background-color:gray;color:#F2F2F2'>White Smoke #F2F2F2</p> |
 """
 
-OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
 """Boolean option list
 
 | Name              | Option                                                                                                                                        | Default |
@@ -36,13 +36,25 @@ OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbon
 | drawBackbone      | Backbone drawing                                                                                                                              | True    |
 | drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
 | drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
-| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
+| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | True    |
 | fillBases         | Fill bases                                                                                                                                    | True    |
-| flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
+| flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | True    |
 
 [^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
 
 """
+
+BOOLEAN_DEFAULT = {
+    'autoHelices': False,
+    'autoInteriorLoops': False,
+    'autoTerminalLoops': False,
+    'drawBackbone': True,
+    'drawBases': True,
+    'drawNC': True,
+    'drawTertiary': True,
+    'fillBases': True,
+    'flat': True
+}
 
 NUMERIC_PARAMS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
 """Allowed numeric parameters
@@ -86,6 +98,19 @@ def set_VARNA(path):
     global _VARNA_PATH
     _VARNA_PATH = path
 
+
+class VarnaConfig:
+    """Default Configuration for VARNA
+    """
+    def __init__(self):
+        _boolean_options = BOOLEAN_DEFAULT
+
+    def _diff_param(self):
+        """Get param name and value that is different than the default
+        """
+        params = {}
+        params.update({p: self._boolean_options[p] for p in BOOLEAN_OPTIONS if not self._boolean_options[p] == BOOLEAN_DEFAULT[p]})
+
 class BasesStyle:
     """Defines a custom base-style, to be applied later to a set of bases.
     A BasesStyle style contains colors used for different components of a base.
@@ -101,7 +126,7 @@ class BasesStyle:
             fill (Hex): color of inner part of base
             outline (Hex): color of outline of base
             label (Hex): base text color
-            number (Hex): base number color
+            number  (Hex): base number color
 
         Examples:
             >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
