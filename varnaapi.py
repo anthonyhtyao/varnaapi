@@ -2,6 +2,7 @@ import re
 import os
 import abc
 from string import ascii_lowercase, ascii_uppercase
+from colour import Color
 
 __version__ = '0.1.0'
 
@@ -9,8 +10,8 @@ _VARNA_PATH="VARNAv3-93.jar"
 HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
 BORDER = re.compile('^\d+x\d+$')
 
-DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
-                      'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
+COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
+              'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
 """Allowed options for basic color setting
 
 | Name         | Object in panel                                         | Default Color |
@@ -24,6 +25,18 @@ DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNu
 | bp           | Base-pair color                                         | <p style='color:#0000FF'>Blue #0000FF</p> |
 | nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  | <p style='background-color:gray;color:#F2F2F2'>White Smoke #F2F2F2</p> |
 """
+
+COLOR_TYPE = {k: 'color' for k in COLOR_LIST}
+COLOR_DEFAULT = {
+    'backbone': Color('#595959'),
+    'background': Color('#FFFFFF'),
+    'baseInner': Color('#F2F2F2'),
+    'baseName': Color('#000000'),
+    'baseNum': Color('#3F3F3F'),
+    'baseOutline': Color('#595959'),
+    'bp': Color('#0000FF'),
+    'nsBasesColor': Color('#F2F2F2')
+}
 
 BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
 """Boolean option list
@@ -43,7 +56,7 @@ BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'dra
 [^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
 
 """
-
+BOOLEAN_TYPE = {k: bool for k in BOOLEAN_OPTIONS}
 BOOLEAN_DEFAULT = {
     'autoHelices': False,
     'autoInteriorLoops': False,
@@ -56,18 +69,60 @@ BOOLEAN_DEFAULT = {
     'flat': True
 }
 
-NUMERIC_PARAMS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
+NUMERIC_TYPE = {'border': tuple, 'bpIncrement': int, 'periodNum': float, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
+NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
 """Allowed numeric parameters
 
-| Label             | Type  | Description                                                                                                                                                                                                    |
-|-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      |
-| periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` |
-| resolution        | float | Chooses the resolution of a bitmap export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           |
-| rotation          | float | Rotates the whole RNA of a certain angular increment                                                                                                                                                           |
-| spaceBetweenBases | float | Sets the distance between consecutive bases                                                                                                                                                                    |
-| zoom              | float | Defines the level of zoom and zoom increment used to display the RNA within this panel                                                                                                                         |
+| Label             | Type  | Description                                                                                                                                                                                                    | Default|
+|-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
+| border | (int, int) | Sets the width and height of the panel border, <i>i.e.</i> the gap between the panel boundaries and those of the surface used to draw the RNA. Border setting is ignored if it's smaller than RNA draw. | N/A |
+| bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      | 0.65 |
+| periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` | 10 |
+| resolution        | float | Chooses the resolution of a bitmap PNG export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           | 1 |
+| rotation          | float | Rotates the whole RNA of a certain angular increment                                                                                                                                                           | 0 |
+| spaceBetweenBases | float | Sets the distance between consecutive bases                                                                                                                                                                    | 1 |
+| zoom              | float | Defines the level of zoom and zoom increment used to display the RNA within this panel (min:0.5, max:60)                                                                                                                         | 1 |
 """
+
+NUMERIC_DEFAULT = {
+    'border': None,
+    'bpIncrement': 0.65,
+    'periodNum': 10,
+    'resolution': 1,
+    'rotation': 0,
+    'spaceBetweenBases': 1,
+    'zoom': 1
+}
+
+PARAM_LIST = BOOLEAN_OPTIONS + COLOR_LIST + NUMERIC_PARAMS
+PARAM_TYPE = {k: v for k, v in BOOLEAN_TYPE.values()}
+PARAM_TYPE.update(COLOR_TYPE)
+PARAM_TYPE.update(NUMERIC_TYPE)
+
+
+def _params_type_check(params):
+    """Private parameter type check.
+    """
+    for par, val in params.values():
+        typ = PARAM_TYPE[par]
+        if typ == 'color':
+            try:
+                Color(val)
+            except:
+                raise 
+        elif par == 'border':
+            try:
+                assert isinstance(val[0], int) and isinstance(type(val[1]), int)
+            except:
+                print("Value for parameter border should be a pair of integers")
+                return
+        else:
+            if not isinstance(val, typ):
+                raise TypeError("The expected value type for parameter {} is {} instead of {}".format('par', typ, type(val)))
+
+
+
+TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
 
 BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
 """Allowed options for base-pair style
@@ -92,6 +147,7 @@ PARENTHESES_SYSTEMS = [
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
+
 def set_VARNA(path):
     """Set VARNA location
     """
@@ -103,13 +159,48 @@ class VarnaConfig:
     """Default Configuration for VARNA
     """
     def __init__(self):
-        _boolean_options = BOOLEAN_DEFAULT
+        self._boolean_options = BOOLEAN_DEFAULT
+        self._color_options = COLOR_DEFAULT
+        self._numeric_options = NUMERIC_DEFAULT
+        self._title = TITLE_DEFAULT
 
     def _diff_param(self):
         """Get param name and value that is different than the default
         """
         params = {}
         params.update({p: self._boolean_options[p] for p in BOOLEAN_OPTIONS if not self._boolean_options[p] == BOOLEAN_DEFAULT[p]})
+        params.update({p: self._color_options[p].get_hex_l().upper() for p in COLOR_LIST if not self._color_options[p] == COLOR_DEFAULT[p]})
+        params.update({p: self._numeric_options[p] for p in NUMERIC_PARAMS if not self._numeric_options[p] == NUMERIC_DEFAULT[p]})
+        if self._numeric_options['border'] is not None:
+            params['border'] = "{}x{}".format(*self._numeric_options['border'])
+        # Update title settings when title is not empty string
+        if not self._title['title'] == TITLE_DEFAULT['title']:
+            params['title'] = self._title['title']
+            if not self._title['titleColor'] == TITLE_DEFAULT['titleColor']:
+                params['titleColor'] = self._title['titleColor'].get_hex_l().upper()
+            if not self._title['titleSize'] == TITLE_DEFAULT['titleSize']:
+                params['titleSize'] = self._title['titleSize']
+
+        return params
+
+    def update(self, **kwargs):
+        """Easy way to update params value
+        """
+        # Assert argument is in the parameter list and type check
+        for key, value in kwargs:
+            try:
+                assert key in PARAM_LIST
+            except AssertionError:
+                print('{} is not a valid parameter name'.format(key))
+                print('A valid argument is one of', ', '.join(PARAM_LIST))
+
+
+
+    def set_title(self, title:str, color='#000000', size:int=19):
+        """Set title displayed at the bottom of the panel with color and font size
+        """
+        self._title = {'title': title, 'titleColor': Color(color), 'titleSize': size}
+
 
 class BasesStyle:
     """Defines a custom base-style, to be applied later to a set of bases.
@@ -415,7 +506,7 @@ class VARNA:
         """Set default color used for different objects in the panel.
 
         Args:
-            **kwargs (dict): See [DEFAULT_COLOR_LIST][varnaapi.DEFAULT_COLOR_LIST] for the list of allowed keywords.
+            **kwargs (dict): See [COLOR_LIST][varnaapi.COLOR_LIST] for the list of allowed keywords.
                 Value of a keyword is the default color, in Hex color codes, used for the related object.
 
         Examples:
@@ -423,7 +514,7 @@ class VARNA:
 
         """
         for key, value in kwargs.items():
-            if key not in DEFAULT_COLOR_LIST:
+            if key not in COLOR_LIST:
                 raise Exception("{} is not a valid keyword".format(key))
             assert_hex_color(value)
         self.default_color = kwargs
