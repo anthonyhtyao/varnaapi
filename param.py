@@ -27,6 +27,7 @@ COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
     | nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  | <p style='background-color:gray;color:#F2F2F2'>White Smoke #F2F2F2</p> |
 """
 
+# TODO: Check gaps default color
 COLOR_TYPE = {k: 'color' for k in COLOR_LIST}
 COLOR_DEFAULT = {
     'backbone': Color ('#595959'),
@@ -36,7 +37,8 @@ COLOR_DEFAULT = {
     'baseNum': Color('#3F3F3F'),
     'baseOutline': Color('#595959'),
     'bp': Color('#0000FF'),
-    'nsBasesColor': Color('#F2F2F2')
+    'nsBasesColor': Color('#F2F2F2'),
+    'gapsColor': Color('gray')
 }
 
 # Default Bases Style
@@ -217,7 +219,7 @@ def _params_type_check(**params):
                 assert isinstance(val[0], int) and isinstance(type(val[1]), int)
             except AssertionError:
                 raise TypeError("Value for border should be a pair of integers")
-        elif tpy == 'choices':
+        elif typ == 'choices':
             if not val in CHOICES_VALUE[par]:
                 raise TypeError('Value of {} should be one of {}'.format(par, CHOICES_VALUE[par]))
         else:
@@ -260,7 +262,7 @@ class VarnaConfig:
         for key, value in kwargs.items():
             try:
                 assert key in PARAM_LIST
-                _params_type_check(key=value)
+                _params_type_check(**{key: value})
                 self._params[key] = value
             except AssertionError:
                 print('{} is not a valid parameter name'.format(key))
@@ -304,6 +306,24 @@ class VarnaConfig:
             >>> varna.set_bp_style("simple")
         """
         self.update(bpStyle=style)
+
+    def _gen_param_cmd(self):
+        """Return list of VARNA command generated from parameters
+        """
+
+        cmd = []
+        for par, val in self._diff_param().items():
+            typ = PARAM_TYPE[par]
+            if typ == 'color':
+                cmd.append('-' + par)
+                cmd.append(val.get_hex_l())
+            elif par == 'border':
+                cmd.append('-border')
+                cmd.append('{}x{}'.format(*val))
+            else:
+                cmd.append('-' + par)
+                cmd.append(str(val))
+        return cmd
 
     # def set_zoom_level(self, level:float):
     #     """Defines the level of zoom and zoom increment used to display the RNA within this panel"""
