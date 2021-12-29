@@ -5,12 +5,11 @@ from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 import subprocess
 
-from param import VarnaConfig, BasesStyle
+from param import VarnaConfig, BasesStyle, _Title, _Highlight
 
 __version__ = '0.1.0'
 
 _VARNA_PATH="VARNAv3-93.jar"
-
 
 
 PARENTHESES_SYSTEMS = [
@@ -21,9 +20,6 @@ PARENTHESES_SYSTEMS = [
 ] + [(c1, c2) for c1, c2 in zip(ascii_uppercase, ascii_lowercase)]
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
-
-# Default Title
-TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
 
 
 def set_VARNA(path):
@@ -224,9 +220,6 @@ class VARNA(VarnaConfig):
     def _init_features(self):
         self.aux_BPs = []
         self.highlight_regions = []
-        # self.params = {'algorithm': "radiate"}
-        # self.default_color = {}
-        # self.options = {}
         self._title = None
         self.bases_styles = {}
         self.annotations = []
@@ -255,7 +248,7 @@ class VARNA(VarnaConfig):
 
         self.aux_BPs.append((i+1, j+1, color, thickness, edge5, edge3, stericity))
 
-    def add_highlight_region(self, i:int, j:int, radius:float=15.0, fill="#9999FF", outline="#3333FF"):
+    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
         """Highlights a region by drawing a polygon of predefined radius,
         fill color and outline color around it.
         A region consists in an interval from base `i` to base `j`.
@@ -268,20 +261,13 @@ class VARNA(VarnaConfig):
             outline (Hex): The color used to draw the line around the highlight
         """
         assert_valid_interval(self.length, i, j)
-        fill = assert_hex_color(fill)
-        outline = assert_hex_color(outline)
-        assert_is_number('radius', radius)
 
-        self.highlight_regions.append((i+1, j+1, radius, fill, outline))
+        self.highlight_regions.append((i+1, j+1, _Highlight(radius, fill, outline)))
 
     def set_title(self, title:str, color='#000000', size:int=19):
         """Set title displayed at the bottom of the panel with color and font size
         """
-        try:
-            assert not str(title) == ""
-        except AssertionError:
-            raise TypeError('Title cannot be empty string')
-        self._title = {'title': str(title), 'titleColor': Color(color), 'titleSize': int(size)}
+        self._title = _Title(title, color, size)
 
 
     def format_structure(self):
@@ -365,30 +351,7 @@ class VARNA(VarnaConfig):
 
         # Title cmd
         if self._title is not None:
-            title, titleColor, titleSize = self._title.values()
-            cmd += ['-title', title]
-            if not titleColor == TITLE_DEFAULT['titleColor']:
-                cmd += ['-titleColor', titleColor.get_hex_l()]
-            if not titleSize == TITLE_DEFAULT['titleSize']:
-                cmd += ['-titleSize', str(titleSize)]
-
-        # Command for defualt colors
-        # for key, color in self.default_color.items():
-        #     if color is not None:
-        #         cmd += " -{} \"{}\"".format(key, color)
-
-        # Options
-        # for key, value in self.options.items():
-        #     if value is not None:
-        #         cmd += " -{} {}".format(key, value)
-
-        # Params
-        # for key, value in self.params.items():
-        #     cmd += " -{} {}".format(key, value)
-
-        # Title
-        # if self.title is not None:
-        #     cmd += " -title {} -titleColor {} -titleSize {}".format(*self.title)
+            cmd += self._title.to_cmd()
 
         # Aux Base pairs
         # if len(self.aux_BPs) > 0:
@@ -397,14 +360,24 @@ class VARNA(VarnaConfig):
         #     cmd += " -auxBPs \"{}\"".format(";".join(auxbps))
 
         # Highlight Region
-        # if len(self.highlight_regions) > 0:
-        #     regions = ["{}-{}:radius={},fill={},outline={}".format(*t) for t in self.highlight_regions]
-        #     cmd += " -highlightRegion \"{}\"".format(";".join(regions))
+        if len(self.highlight_regions) > 0:
+            res = []
+            for item in self.highlight_regions:
+                s = "{}-{}".format(item[0], item[1])
+                setting = item[2].to_cmd()
+                if not setting == "":
+                    s += ":"+setting
+                res.append(s)
+            cmd += ['-highlightRegion', ';'.join(res)]
 
         # BasesStyles
-        # for ind, (style, bases) in enumerate(self.bases_styles.items()):
-        #     cmd += " -basesStyle{} {}".format(ind+1, str(style))
-        #     cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
+        styles = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNum'}
+        styles_dafault = {v: self.get_params().get(v) for v in styles.values() if v in self.get_params()}
+        for ind, (style, bases) in enumerate(self.bases_styles.items()):
+            s = style.to_cmd(**styles_dafault)
+            if not s == "":
+                cmd += ["-basesStyle{}".format(ind+1), s]
+                cmd += ["-applyBasesStyle{}on".format(ind+1), ','.join(map(str, bases))]
 
         # Annotations
         # if len(self.annotations) > 0:

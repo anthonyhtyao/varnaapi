@@ -47,53 +47,53 @@ COLOR_DEFAULT = {
 baseArgMap = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNumber'}
 
 
-class BasesStyle:
-    """Defines a custom base-style, to be applied later to a set of bases.
-    A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
+# class BasesStyle:
+#     """Defines a custom base-style, to be applied later to a set of bases.
+#     A BasesStyle style contains colors used for different components of a base.
+#     See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
 
-    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
-    """
-    def __init__(self, fill=None, outline=None, label=None, number=None):
-        """Basesstyle constructor from given colors for different components.
-        At least one argument should be given.
+#     __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
+#     """
+#     def __init__(self, fill=None, outline=None, label=None, number=None):
+#         """Basesstyle constructor from given colors for different components.
+#         At least one argument should be given.
 
-        Args:
-            fill (Hex): color of inner part of base
-            outline (Hex): color of outline of base
-            label (Hex): base text (name) color
-            number  (Hex): base number color
+#         Args:
+#             fill (Hex): color of inner part of base
+#             outline (Hex): color of outline of base
+#             label (Hex): base text (name) color
+#             number  (Hex): base number color
 
-        Examples:
-            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
-        """
-        self._color = {}
-        self.update(fill, outline, label, number)
+#         Examples:
+#             >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
+#         """
+#         self._color = {}
+#         self.update(fill, outline, label, number)
 
-    def update(self, fill=None, outline=None, label=None, number=None):
-        """Update component _colors.
-        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
-        """
-        # if fill is None and outline is None and label is None and number is None:
-        #     raise Exception("At least one should not be None")
-        if fill is not None:
-            self._color["fill"] = Color(fill)
-        if outline is not None:
-            self._color["outline"] = Color(outline)
-        if label is not None:
-            self._color["label"] = Color(label)
-        if number is not None:
-            self._color["number"] = Color(number)
+#     def update(self, fill=None, outline=None, label=None, number=None):
+#         """Update component _colors.
+#         Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
+#         """
+#         # if fill is None and outline is None and label is None and number is None:
+#         #     raise Exception("At least one should not be None")
+#         if fill is not None:
+#             self._color["fill"] = Color(fill)
+#         if outline is not None:
+#             self._color["outline"] = Color(outline)
+#         if label is not None:
+#             self._color["label"] = Color(label)
+#         if number is not None:
+#             self._color["number"] = Color(number)
 
-    def __str__(self):
-        order = ['fill', 'outline', 'label', 'number']
-        lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color]
-        return ",".join(lst)
+#     def __str__(self):
+#         order = ['fill', 'outline', 'label', 'number']
+#         lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color]
+#         return ",".join(lst)
 
-    def cmd(self):
-        order = ['fill', 'outline', 'label', 'number']
-        lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color and not self._color[k] == COLOR_DEFAULT[baseArgMap[k]]]
-        return ",".join(lst)
+#     def cmd(self):
+#         order = ['fill', 'outline', 'label', 'number']
+#         lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color and not self._color[k] == COLOR_DEFAULT[baseArgMap[k]]]
+#         return ",".join(lst)
 
 #################
 #               #
@@ -228,7 +228,99 @@ def _params_type_check(**params):
                 raise TypeError("The expected value type for {} is {} instead of {}".format('par', typ, type(val)))
 
 
+class _DefaultObj:
+    def __init__(self, **kwargs):
+        self.params = list(kwargs.keys())
+        self.default = kwargs.copy()
+        self.values = {k: None for k in self.params}
 
+    def _get_diff(self):
+        res = {}
+        for par in self.params:
+            val = self.values[par]
+            if not val == self.default[par]:
+                if isinstance(val, Color):
+                    res[par] = val.get_hex_l()
+                else:
+                    res[par] = val
+        return res
+
+    def to_cmd(self):
+        res = []
+        for par, val in self._get_diff().items():
+            res += ['-'+par, str(val)]
+        return res
+
+
+# Default Title
+TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
+
+class _Title(_DefaultObj):
+    def __init__(self, title, color, size):
+        super().__init__(**TITLE_DEFAULT)
+        try:
+            assert not str(title) == ""
+        except AssertionError:
+            raise TypeError('Title cannot be empty string')
+        self.values['title'] = str(title)
+        self.values['titleColor'] = Color(color)
+        self.values['titleSize'] = int(size)
+
+
+HIGHLIGHT_DEFAULT = {'radius': 16, 'fill': Color('#BCFFDD'), 'outline': Color('#6ED86E')}
+
+class _Highlight(_DefaultObj):
+    def __init__(self, radius, fill, outline):
+        super().__init__(**HIGHLIGHT_DEFAULT)
+        self.values['radius'] = float(radius)
+        self.values['fill'] = Color(fill)
+        self.values['outline'] = Color(outline)
+
+    def to_cmd(self):
+        return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
+
+
+
+class BasesStyle(_DefaultObj):
+    """Defines a custom base-style, to be applied later to a set of bases.
+    A BasesStyle style contains colors used for different components of a base.
+    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
+
+    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
+    """
+    def __init__(self, fill=None, outline=None, label=None, number=None):
+        """Basesstyle constructor from given colors for different components.
+        At least one argument should be given.
+
+        Args:
+            fill (Hex): color of inner part of base
+            outline (Hex): color of outline of base
+            label (Hex): base text (name) color
+            number  (Hex): base number color
+
+        Examples:
+            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
+        """
+        super().__init__(fill=COLOR_DEFAULT['baseInner'], outline=COLOR_DEFAULT['baseOutline'], label=COLOR_DEFAULT['baseName'], number=COLOR_DEFAULT['baseNum'])
+        self.update(fill=fill, outline=outline, label=label, number=number)
+
+    def update(self, **kwargs):
+        """Update component _colors.
+        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
+        """
+        # if fill is None and outline is None and label is None and number is None:
+        #     raise Exception("At least one should not be None")
+        for par, val in kwargs.items():
+            if val is not None:
+                self.values[par] = Color(val)
+
+    def to_cmd(self, **kwargs):
+        """Custom command generator for BasesStyle
+        Function takes the default bases color set by user in kwargs
+        """
+        for par, val in kwargs.items():
+            self.default[par] = val
+        return ",".join(k+"="+v for k, v in self._get_diff().items() if v is not None)
 
 class VarnaConfig:
     """Create default configuration for VARNA
