@@ -22,6 +22,9 @@ PARENTHESES_SYSTEMS = [
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
+# Default Title
+TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
+
 
 def set_VARNA(path):
     """Set VARNA location
@@ -224,7 +227,7 @@ class VARNA(VarnaConfig):
         # self.params = {'algorithm': "radiate"}
         # self.default_color = {}
         # self.options = {}
-        # self.title = None
+        self._title = None
         self.bases_styles = {}
         self.annotations = []
 
@@ -271,6 +274,14 @@ class VARNA(VarnaConfig):
 
         self.highlight_regions.append((i+1, j+1, radius, fill, outline))
 
+    def set_title(self, title:str, color='#000000', size:int=19):
+        """Set title displayed at the bottom of the panel with color and font size
+        """
+        try:
+            assert not str(title) == ""
+        except AssertionError:
+            raise TypeError('Title cannot be empty string')
+        self._title = {'title': str(title), 'titleColor': Color(color), 'titleSize': int(size)}
 
 
     def format_structure(self):
@@ -351,6 +362,16 @@ class VARNA(VarnaConfig):
         # cmd += " -o {}".format(self.output)
 
         cmd += self._gen_param_cmd()
+
+        # Title cmd
+        if self._title is not None:
+            title, titleColor, titleSize = self._title.values()
+            cmd += ['-title', title]
+            if not titleColor == TITLE_DEFAULT['titleColor']:
+                cmd += ['-titleColor', titleColor.get_hex_l()]
+            if not titleSize == TITLE_DEFAULT['titleSize']:
+                cmd += ['-titleSize', str(titleSize)]
+
         # Command for defualt colors
         # for key, color in self.default_color.items():
         #     if color is not None:

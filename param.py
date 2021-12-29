@@ -1,5 +1,6 @@
 # Varna Parameter Setting
 
+from numbers import Real
 from colour import Color
 
 
@@ -137,7 +138,7 @@ BOOLEAN_DEFAULT = {
 #               #
 #################
 
-NUMERIC_TYPE = {'border': tuple, 'bpIncrement': int, 'periodNum': float, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
+NUMERIC_TYPE = {'border': tuple, 'bpIncrement': int, 'periodNum': Real, 'resolution': Real, 'rotation': Real, 'spaceBetweenBases': Real, 'zoom': Real}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
 """Allowed numeric parameters
     | Label             | Type  | Description                                                                                                                                                                                                    | Default|
@@ -220,15 +221,13 @@ def _params_type_check(**params):
             except AssertionError:
                 raise TypeError("Value for border should be a pair of integers")
         elif typ == 'choices':
-            if not val in CHOICES_VALUE[par]:
+            if val not in CHOICES_VALUE[par]:
                 raise TypeError('Value of {} should be one of {}'.format(par, CHOICES_VALUE[par]))
         else:
             if not isinstance(val, typ):
                 raise TypeError("The expected value type for {} is {} instead of {}".format('par', typ, type(val)))
 
 
-# Default Title
-TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
 
 
 class VarnaConfig:
@@ -236,7 +235,6 @@ class VarnaConfig:
     """
     def __init__(self):
         self._params = PARAM_DEFAULT.copy()
-        self._title = TITLE_DEFAULT
 
     def _diff_param(self):
         """Get param name and value that is different than the default
@@ -245,13 +243,6 @@ class VarnaConfig:
         if self._params['border'] is not None:
             params['border'] = "{}x{}".format(*self._params['border'])
 
-        # Update title settings when title is not empty string
-        if not self._title['title'] == TITLE_DEFAULT['title']:
-            params['title'] = self._title['title']
-            if not self._title['titleColor'] == TITLE_DEFAULT['titleColor']:
-                params['titleColor'] = self._title['titleColor'].get_hex_l().upper()
-            if not self._title['titleSize'] == TITLE_DEFAULT['titleSize']:
-                params['titleSize'] = self._title['titleSize']
 
         return params
 
@@ -263,17 +254,16 @@ class VarnaConfig:
             try:
                 assert key in PARAM_LIST
                 _params_type_check(**{key: value})
-                self._params[key] = value
+                if PARAM_TYPE[key] == 'color':
+                    self._params[key] = Color(value)
+                else:
+                    self._params[key] = value
             except AssertionError:
                 print('{} is not a valid parameter name'.format(key))
                 print('A valid argument is one of', ', '.join(PARAM_LIST))
             except TypeError as e:
                 print(e)
 
-    def set_title(self, title:str, color='#000000', size:int=19):
-        """Set title displayed at the bottom of the panel with color and font size
-        """
-        self._title = {'title': str(title), 'titleColor': Color(color), 'titleSize': int(size)}
 
     def get_params(self, complete=False):
         """Get parameters with value in dictionary
