@@ -5,7 +5,7 @@ from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 import subprocess
 
-from param import VarnaConfig, BasesStyle, _Title, _Highlight
+from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation
 
 __version__ = '0.1.0'
 
@@ -35,22 +35,22 @@ def set_VARNA(path):
 #               #
 #################
 
-class _Annotation:
-    """Basic Annotation
-    """
-    def __init__(self, text, type, color="#000000", size=10):
-        self.text = text
-        self.type = type
-        self.color = color
-        self.size = size #: int: font size
+# class _Annotation:
+#     """Basic Annotation
+#     """
+#     def __init__(self, text, type, color="#000000", size=10):
+#         self.text = text
+#         self.type = type
+#         self.color = color
+#         self.size = size #: int: font size
 
-    def asdict(self):
-        return {'text': self.text, 'type': self.type, 'color': self.color,
-                'size': self.size}
+#     def asdict(self):
+#         return {'text': self.text, 'type': self.type, 'color': self.color,
+#                 'size': self.size}
 
-    @abc.abstractmethod
-    def to_cmd(self):
-        pass
+#     @abc.abstractmethod
+#     def to_cmd(self):
+#         pass
 
 
 class _ObjectAnnotation(_Annotation):
@@ -68,8 +68,8 @@ class _ObjectAnnotation(_Annotation):
             .format(**self.asdict())
 
 
-class BaseAnnotation(_ObjectAnnotation):
-    def __init__(self, text:str, anchor:int, color="#000000", size=10):
+class BaseAnnotation(_Annotation):
+    def __init__(self, text:str, anchor:int, color="#000000", size=12):
         """Annoation on a base.
 
         Args:
@@ -78,27 +78,27 @@ class BaseAnnotation(_ObjectAnnotation):
             color (Hex): Annotation color
             size (int): Font size
         """
-        super().__init__(text, 'B', anchor, color, size)
+        super().__init__(text, 'B', int(anchor), color, size)
 
 
-class LoopAnnotation(_ObjectAnnotation):
+class LoopAnnotation(_Annotation):
     """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
     Argument `anchor` can be index of any base in the loop of interest.
     """
-    def __init__(self, text, anchor, color="#000000", size=10):
-        super().__init__(text, 'L', anchor, color, size)
+    def __init__(self, text, anchor, color="#000000", size=12):
+        super().__init__(text, 'L', int(anchor), color, size)
 
 
 class HelixAnnotation(_ObjectAnnotation):
     """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
     Argument `anchor` can be index of any base in the helix of interest.
     """
-    def __init__(self, text, anchor, color="#000000", size=10):
-        super().__init__(text, 'H', anchor, color, size)
+    def __init__(self, text, anchor, color="#000000", size=12):
+        super().__init__(text, 'H', int(anchor), color, size)
 
 
 class StaticAnnotation(_Annotation):
-    def __init__(self, text, x, y, color="#000000", size=10):
+    def __init__(self, text, x, y, color="#000000", size=12):
         """Annotation on a specified position in VARNA drawing.
         Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
         However, arguments `x` and `y` are needed to specify annotation position.
@@ -112,19 +112,7 @@ class StaticAnnotation(_Annotation):
         Examples:
             >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
         """
-        super().__init__(text, 'P', color, size)
-        self.x = x
-        self.y = y
-
-    def asdict(self):
-        d = super().asdict()
-        d['x'] = self.x
-        d['y'] = self.y
-        return d
-
-    def to_cmd(self):
-        return "{text}:type={type},x={x},y={y},color={color},size={size}"\
-            .format(**self.asdict())
+        super().__init__(text, 'P', (int(x), int(y)),  color, size)
 
 # def is_hex_color(color):
 #     match = HEX.search(color)
@@ -380,8 +368,8 @@ class VARNA(VarnaConfig):
                 cmd += ["-applyBasesStyle{}on".format(ind+1), ','.join(map(str, bases))]
 
         # Annotations
-        # if len(self.annotations) > 0:
-        #     cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
+        if len(self.annotations) > 0:
+            cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
 
         return cmd
 

@@ -322,6 +322,80 @@ class BasesStyle(_DefaultObj):
             self.default[par] = val
         return ",".join(k+"="+v for k, v in self._get_diff().items() if v is not None)
 
+
+#################
+#               #
+#  Annotation   #
+#               #
+#################
+
+ANNOTATION_DEFAULT = {'type': 'L', 'color': Color('black'), 'size': 12}
+
+class _Annotation(_DefaultObj):
+    def __init__(self, text, aType, anchor, color="#000000", size=12):
+        super().__init__(**ANNOTATION_DEFAULT)
+        try:
+            assert not str(text) == ""
+        except AssertionError:
+            raise TypeError('Text cannot be empty string')
+        self.text = text
+        self.values['type'] = aType
+        self.values['color'] = Color(color)
+        self.values['size'] = int(size)
+        self.anchor = anchor
+
+    def to_cmd(self):
+        res = ["{}={}".format(k, v) for k, v in self._get_diff().items()]
+        if isinstance(self.anchor, int):
+            res.append("anchor={}".format(self.anchor))
+        else:
+            res += ["x={}".format(self.anchor[0]), "y={}".format(self.anchor[1])]
+        return "{}:{}".format(self.text, ','.join(res))
+
+class BaseAnnotation(_Annotation):
+    def __init__(self, text:str, anchor:int, color="#000000", size=12):
+        """Annoation on a base.
+
+        Args:
+            text: Annotation caption
+            anchor: Index of base to annotate
+            color (Hex): Annotation color
+            size (int): Font size
+        """
+        super().__init__(text, 'B', int(anchor), color, size)
+
+class LoopAnnotation(_Annotation):
+    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
+    Argument `anchor` can be index of any base in the loop of interest.
+    """
+    def __init__(self, text, anchor, color="#000000", size=12):
+        super().__init__(text, 'L', int(anchor), color, size)
+
+class HelixAnnotation(_Annotation):
+    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
+    Argument `anchor` can be index of any base in the helix of interest.
+    """
+    def __init__(self, text, anchor, color="#000000", size=12):
+        super().__init__(text, 'H', int(anchor), color, size)
+
+class StaticAnnotation(_Annotation):
+    def __init__(self, text, x, y, color="#000000", size=12):
+        """Annotation on a specified position in VARNA drawing.
+        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
+        However, arguments `x` and `y` are needed to specify annotation position.
+
+        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
+
+        Args:
+            x (int): x-coordinate of position
+            y (int): y-ccordinate of position
+
+        Examples:
+            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
+        """
+        super().__init__(text, 'P', (int(x), int(y)),  color, size)
+
+
 class VarnaConfig:
     """Create default configuration for VARNA
     """
