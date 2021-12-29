@@ -4,6 +4,8 @@ import abc
 from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 
+from param import VarnaConfig
+
 __version__ = '0.1.0'
 
 _VARNA_PATH="VARNAv3-93.jar"
