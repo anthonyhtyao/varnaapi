@@ -2,74 +2,15 @@ import re
 import os
 import abc
 from string import ascii_lowercase, ascii_uppercase
+from colour import Color
+import subprocess
+
+from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle
 
 __version__ = '0.1.0'
 
 _VARNA_PATH="VARNAv3-93.jar"
-HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
-BORDER = re.compile('^\d+x\d+$')
 
-DEFAULT_COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
-                      'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
-"""Allowed options for color setting
-
-| Name         | Object in panel                                         |
-|--------------|---------------------------------------------------------|
-| backbone     | Phosphate-sugar backbone (aka skeleton) of the RNA      |
-| background   | Background color used within the panel                  |
-| baseInner    | Inner base color                                        |
-| baseName     | Nucleotide name                                         |
-| baseNum      | Base numbers                                            |
-| baseOutline  | Outer base color                                        |
-| bp           | Base-pair                                               |
-| nsBasesColor | Non-standard bases (Anything but `A`, `C`, `G` or `U`)  |
-"""
-
-OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
-"""Boolean option list
-
-| Name              | Option                                                                                                                                        | Default |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| autoHelices       | Annotates each and every helix in the RNA with a unique `Hn` label                                                                            | False   |
-| autoInteriorLoops | Annotates each and every interior loop of the RNA with a unique `In` label                                                                    | False   |
-| autoTerminalLoops | Annotates each and every terminal loop of the RNA with a unique `Tn` label                                                                    | False   |
-| drawBackbone      | Backbone drawing                                                                                                                              | True    |
-| drawBases         | Displays the outline of a nucleotide base                                                                                                     | True    |
-| drawNC            | Displays non-canonical base-pairs                                                                                                             | True    |
-| drawTertiary      | Display of `non-planar` base-pairs, _i.e._ pseudoknots [^1]                                                                                   | False   |
-| fillBases         | Fill bases                                                                                                                                    | True    |
-| flat              | In `radiate` drawing mode, redraws the whole structure, aligning to a  baseline the base featured on the exterior loops (aka "dangling ends") | False   |
-
-[^1]: Since there is no canonical definition of pseudoknotted portions, a maximal planar subset is extracted from the input structure, defined to be the planar portion, and used as a scaffold for the drawing algorithms.
-
-"""
-
-NUMERIC_PARAMS = ['bpIncrement', 'periodNum', 'resolution', 'rotation', 'spaceBetweenBases', 'zoom']
-"""Allowed numeric parameters
-
-| Label             | Type  | Description                                                                                                                                                                                                    |
-|-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      |
-| periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` |
-| resolution        | float | Chooses the resolution of a bitmap export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           |
-| rotation          | float | Rotates the whole RNA of a certain angular increment                                                                                                                                                           |
-| spaceBetweenBases | float | Sets the distance between consecutive bases                                                                                                                                                                    |
-| zoom              | float | Defines the level of zoom and zoom increment used to display the RNA within this panel                                                                                                                         |
-"""
-
-BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
-"""Allowed options for base-pair style
-
-| Label  | Description                                                                                            |
-|--------|--------------------------------------------------------------------------------------------------------|
-| none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures            |
-| simple | A simple line is used to draw any base-pair, regardless of its type                                    |
-| rnaviz | A small square is drawn at equal distance of the two partners                                          |
-| lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
-
-__See Also:__ [VARNA.set_bp_style][varnaapi.VARNA.set_bp_style]
-
-"""
 
 PARENTHESES_SYSTEMS = [
     ("(", ")"),
@@ -80,165 +21,15 @@ PARENTHESES_SYSTEMS = [
 PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
+
 def set_VARNA(path):
     """Set VARNA location
     """
     global _VARNA_PATH
     _VARNA_PATH = path
 
-class BasesStyle:
-    """Defines a custom base-style, to be applied later to a set of bases.
-    A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
-
-    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
-    """
-    def __init__(self, fill=None, outline=None, label=None, number=None):
-        """Basesstyle constructor from given colors for different components.
-        At least one argument should be given.
-
-        Args:
-            fill (Hex): color of inner part of base
-            outline (Hex): color of outline of base
-            label (Hex): base text color
-            number (Hex): base number color
-
-        Examples:
-            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
-        """
-        self.color = {}
-        self.update(fill, outline, label, number)
-
-    def update(self, fill=None, outline=None, label=None, number=None):
-        """Update component colors.
-        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
-        """
-        if fill is None and outline is None and label is None and number is None:
-            raise Exception("At least one should not be None")
-        if fill is not None:
-            fill = assert_hex_color(fill)
-            self.color["fill"] = fill
-        if outline is not None:
-            outline = assert_hex_color(outline)
-            self.color["outline"] = outline
-        if label is not None:
-            label = assert_hex_color(label)
-            self.color["label"] = label
-        if number is not None:
-            number = assert_hex_color(number)
-            self.color["number"] = number
-
-    def __str__(self):
-        order = ['fill', 'outline', 'label', 'number']
-        lst = ["{}={}".format(k, self.color[k]) for k in order if k in self.color]
-        return ",".join(lst)
 
 
-class _Annotation:
-    """Basic Annotation
-    """
-    def __init__(self, text, type, color="#000000", size=10):
-        self.text = text
-        self.type = type
-        self.color = color
-        self.size = size #: int: font size
-
-    def asdict(self):
-        return {'text': self.text, 'type': self.type, 'color': self.color,
-                'size': self.size}
-
-    @abc.abstractmethod
-    def to_cmd(self):
-        pass
-
-
-class _ObjectAnnotation(_Annotation):
-    def __init__(self, text, type, anchor, color="#000000", size=10):
-        super().__init__(text, type, color, size)
-        self.anchor = anchor
-
-    def asdict(self):
-        d = super().asdict()
-        d['anchor'] = self.anchor + 1
-        return d
-
-    def to_cmd(self):
-        return "{text}:type={type},anchor={anchor},color={color},size={size}"\
-            .format(**self.asdict())
-
-
-class BaseAnnotation(_ObjectAnnotation):
-    def __init__(self, text:str, anchor:int, color="#000000", size=10):
-        """Annoation on a base.
-
-        Args:
-            text: Annotation caption
-            anchor: Index of base to annotate
-            color (Hex): Annotation color
-            size (int): Font size
-        """
-        super().__init__(text, 'B', anchor, color, size)
-
-
-class LoopAnnotation(_ObjectAnnotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
-    Argument `anchor` can be index of any base in the loop of interest.
-    """
-    def __init__(self, text, anchor, color="#000000", size=10):
-        super().__init__(text, 'L', anchor, color, size)
-
-
-class HelixAnnotation(_ObjectAnnotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
-    Argument `anchor` can be index of any base in the helix of interest.
-    """
-    def __init__(self, text, anchor, color="#000000", size=10):
-        super().__init__(text, 'H', anchor, color, size)
-
-
-class StaticAnnotation(_Annotation):
-    def __init__(self, text, x, y, color="#000000", size=10):
-        """Annotation on a specified position in VARNA drawing.
-        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
-        However, arguments `x` and `y` are needed to specify annotation position.
-
-        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
-
-        Args:
-            x (int): x-coordinate of position
-            y (int): y-ccordinate of position
-
-        Examples:
-            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
-        """
-        super().__init__(text, 'P', color, size)
-        self.x = x
-        self.y = y
-
-    def asdict(self):
-        d = super().asdict()
-        d['x'] = self.x
-        d['y'] = self.y
-        return d
-
-    def to_cmd(self):
-        return "{text}:type={type},x={x},y={y},color={color},size={size}"\
-            .format(**self.asdict())
-
-def is_hex_color(color):
-    match = HEX.search(color)
-    if match:
-        return True
-    return False
-
-def assert_hex_color(color):
-    if not is_hex_color(color):
-        raise Exception("{} is not a valid Hex color code".format(color))
-    return color.upper()
-
-def assert_is_number(name, value):
-    if not (isinstance(value, float) or isinstance(value, int)):
-        raise Exception(name + " should be a float or an integer")
 
 def assert_valid_interval(length, *args):
     for i in args:
@@ -271,8 +62,8 @@ def _parse_vienna(ss):
             res[ii],res[i] = i,ii
     return res
 
-class VARNA:
-    def __init__(self, seq:str=None, structure=None):
+class VARNA(VarnaConfig):
+    def __init__(self, **kwargs):
         """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
         If sequence and structure have different size, the larger one is used
         and ` `s or `.`s will be added to sequence or structure to complement.
@@ -288,10 +79,14 @@ class VARNA:
               - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
 
         """
+        super().__init__()
+        self._init_features()
+        self._read_input(**kwargs)
+
+    def _read_input(self, seq=None, structure=None):
         self.length = -1
         self.structure = []
         self.sequence = ""
-        self._init_features()
 
         if structure is not None:
             if isinstance(structure, list):
@@ -318,14 +113,11 @@ class VARNA:
     def _init_features(self):
         self.aux_BPs = []
         self.highlight_regions = []
-        self.params = {'algorithm': "radiate"}
-        self.default_color = {}
-        self.options = {}
-        self.title = None
+        self._title = None
         self.bases_styles = {}
         self.annotations = []
 
-    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='#0000FF', thickness:float=1.0):
+    def add_aux_BP(self, i:int, j:int, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -338,18 +130,10 @@ class VARNA:
             thickness: Base-pair thickness
         """
         assert_valid_interval(self.length, i, j)
-        if edge5 not in ['wc', 's', 'h']:
-            raise Exception("edge5 should be one of wc, s, and h")
-        if edge3 not in ['wc', 's', 'h']:
-            raise Exception("edge3 should be one of wc, s, and h")
-        if stericity not in ['cis', 'trans']:
-            raise Exception("stericity should be either cis or trans")
-        color = assert_hex_color(color)
-        assert_is_number('thickness', thickness)
 
-        self.aux_BPs.append((i+1, j+1, color, thickness, edge5, edge3, stericity))
+        self.aux_BPs.append((i+1, j+1, _BPStyle(**{k: v for k, v in kwargs.items() if v is not None})))
 
-    def add_highlight_region(self, i:int, j:int, radius:float=15.0, fill="#9999FF", outline="#3333FF"):
+    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
         """Highlights a region by drawing a polygon of predefined radius,
         fill color and outline color around it.
         A region consists in an interval from base `i` to base `j`.
@@ -362,80 +146,14 @@ class VARNA:
             outline (Hex): The color used to draw the line around the highlight
         """
         assert_valid_interval(self.length, i, j)
-        fill = assert_hex_color(fill)
-        outline = assert_hex_color(outline)
-        assert_is_number('radius', radius)
 
-        self.highlight_regions.append((i+1, j+1, radius, fill, outline))
+        self.highlight_regions.append((i+1, j+1, _Highlight(radius, fill, outline)))
 
-    def set_algorithm(self, algo):
-        """Set algorithm other than __naview__ to draw secondary structure.
-        Supported options are __line__, __circular__, __radiate__ and __naview__.
-        """
-        if algo not in ['line', 'circular', 'radiate', 'naview']:
-            raise Exception("Sould be one of line, circular, radiate or naview")
-        self.params['algorithm'] = algo
-
-
-    def set_title(self, title:str, color:str='#808080', size:int=10):
+    def set_title(self, title:str, color='#000000', size:int=19):
         """Set title displayed at the bottom of the panel with color and font size
         """
-        self.title = (title, color, size)
+        self._title = _Title(title, color, size)
 
-    def set_zoom_level(self, level:float):
-        """Defines the level of zoom and zoom increment used to display the RNA within this panel"""
-        self.params['zoom'] = level
-
-    def set_default_color(self, **kwargs):
-        """Set default color used for different objects in the panel.
-
-        Args:
-            **kwargs (dict): See [DEFAULT_COLOR_LIST][varnaapi.DEFAULT_COLOR_LIST] for the list of allowed keywords.
-                Value of a keyword is the default color, in Hex color codes, used for the related object.
-
-        Examples:
-            >>> set_default_color({'backbone': '#000000', 'bp':'#FFFF00'})
-
-        """
-        for key, value in kwargs.items():
-            if key not in DEFAULT_COLOR_LIST:
-                raise Exception("{} is not a valid keyword".format(key))
-            assert_hex_color(value)
-        self.default_color = kwargs
-
-    def toggle_options(self, **kwargs):
-        """Enable or disable options of drawing
-
-        Args:
-            **kwargs (dict): See [OPTIONS][varnaapi.OPTIONS] for detailed option lists.
-                      Value of keyword is either `True` or `False`
-
-
-        """
-        for key, value in kwargs.items():
-            if key not in OPTIONS:
-                raise Exception("{} is not a valid keyword".format(key))
-            if not isinstance(value, bool):
-                raise Exception(key + "should be a boolean")
-        self.options = kwargs
-
-    def set_numeric_params(self, **kwargs):
-        """Change value of numeric parameters in one function.
-        This is equivalent to use setting function of each parameter,
-        such as [set_bp_increment][varnaapi.VARNA.set_bp_increment].
-
-        Args:
-            **kwargs (dict): See [NUMERIC_PARAMS][varnaapi.NUMERIC_PARAMS] for allowed keywords.
-
-        """
-        for key, value in kwargs.items():
-            if key not in NUMERIC_PARAMS:
-                raise Exception("{} is not a valid keyword".format(key))
-            assert_is_number(key, value)
-            if key == "periodNum":
-                self.params['periodNum'] = int(value)
-            else:
-                self.params[key] = float(value)
 
     def format_structure(self):
         """Return secondary structure in dot-brackaet notation
@@ -464,41 +182,6 @@ class VARNA:
                 break
         return "".join(res)
 
-
-    def set_border(self, border:str):
-        """Sets the width and height of the panel border, _i.e._ the gap
-        between the panel boundaries and those of the surface used to draw the RNA.
-        Parameter `border` is in format `"wxh"` where `w` and `h` are width and height separated by `x`.
-
-        Example:
-            >>> set_border("20x30")
-        """
-        match = BORDER.search(border)
-        if not match:
-            raise Exception("border should be the format nxm where n and m are numbers")
-        self.params['border'] = "\"{}\"".format(border)
-
-    def set_bp_style(self, style:str):
-        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.BP_STYLES]
-
-        __Note:__ `lw` is set by default
-
-        Example:
-            >>> varna.set_bp_style("simple")
-        """
-        if style not in BP_STYLES:
-            raise Exception('Should be one of {}'.format(BP_STYLES))
-        self.params['bpStyle'] = style
-
-    def set_bp_increment(self, value:float):
-        """In linear drawing mode, defines the vertical increment used to
-        separate two successive, nested base-pairs.
-
-        Example:
-            >>> varna.set_bp_increment(1.2)
-        """
-        assert_is_number('value', value)
-        self.params['bpIncrement'] = float(value)
 
 
     def add_bases_style(self, style:BasesStyle, bases:list):
@@ -541,55 +224,60 @@ class VARNA:
         """
         Return command to run VARNA
         """
-        cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(_VARNA_PATH)
+        cmd = ['java', '-cp', _VARNA_PATH, 'fr.orsay.lri.varna.applications.VARNAcmd']
+        # cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(_VARNA_PATH)
 
         cmd += self._gen_input_cmd()
 
-        cmd += " -o {}".format(self.output)
+        cmd += ['-o', self.output]
+        # cmd += " -o {}".format(self.output)
 
-        # Command for defualt colors
-        for key, color in self.default_color.items():
-            if color is not None:
-                cmd += " -{} \"{}\"".format(key, color)
+        cmd += self._gen_param_cmd()
 
-        # Options
-        for key, value in self.options.items():
-            if value is not None:
-                cmd += " -{} {}".format(key, value)
-
-        # Params
-        for key, value in self.params.items():
-            cmd += " -{} {}".format(key, value)
-
-        # Title
-        if self.title is not None:
-            cmd += " -title {} -titleColor {} -titleSize {}".format(*self.title)
+        # Title cmd
+        if self._title is not None:
+            cmd += self._title.to_cmd()
 
         # Aux Base pairs
         if len(self.aux_BPs) > 0:
-            auxbps = ["({},{}):color={},thickness={},edge5={},edge3={},stericity={}"
-                      .format(*t) for t in self.aux_BPs]
-            cmd += " -auxBPs \"{}\"".format(";".join(auxbps))
+            res = []
+            for i, j, style in self.aux_BPs:
+                s = "({},{})".format(i,j)
+                setting = style.to_cmd(self.get_params(complete=True)['bp'])
+                if not setting == "":
+                    s += ":"+setting
+                res.append(s)
+            cmd += ["-auxBPs", ";".join(res)]
 
         # Highlight Region
         if len(self.highlight_regions) > 0:
-            regions = ["{}-{}:radius={},fill={},outline={}".format(*t) for t in self.highlight_regions]
-            cmd += " -highlightRegion \"{}\"".format(";".join(regions))
+            res = []
+            for item in self.highlight_regions:
+                s = "{}-{}".format(item[0], item[1])
+                setting = item[2].to_cmd()
+                if not setting == "":
+                    s += ":"+setting
+                res.append(s)
+            cmd += ['-highlightRegion', ';'.join(res)]
 
         # BasesStyles
+        styles = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNum'}
+        styles_dafault = {v: self.get_params().get(v) for v in styles.values() if v in self.get_params()}
         for ind, (style, bases) in enumerate(self.bases_styles.items()):
-            cmd += " -basesStyle{} {}".format(ind+1, str(style))
-            cmd += " -applyBasesStyle{}on {}".format(ind+1, ','.join(map(str, bases)))
+            s = style.to_cmd(**styles_dafault)
+            if not s == "":
+                cmd += ["-basesStyle{}".format(ind+1), s]
+                cmd += ["-applyBasesStyle{}on".format(ind+1), ','.join(map(str, bases))]
 
         # Annotations
         if len(self.annotations) > 0:
-            cmd += " -annotations \"{}\"".format(';'.join([t.to_cmd() for t in self.annotations]))
+            cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
 
         return cmd
 
-
     def _gen_input_cmd(self):
-        return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.format_structure())
+        return ['-sequenceDBN', self.sequence, '-structureDBN', self.format_structure()]
+        # return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.format_structure())
 
     def savefig(self, output):
         """
@@ -598,7 +286,8 @@ class VARNA:
         self.output = output
         cmd = self._gen_command()
         print(cmd)
-        os.popen(cmd).close()
+        # os.popen(cmd).close()
+        subprocess.run(cmd)
 
     def __repr__(self):
         return repr((self.format_structure(),self.sequence))
