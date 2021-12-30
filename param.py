@@ -42,58 +42,6 @@ COLOR_DEFAULT = {
     'gapsColor': Color('gray')
 }
 
-# Default Bases Style
-
-baseArgMap = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNumber'}
-
-
-# class BasesStyle:
-#     """Defines a custom base-style, to be applied later to a set of bases.
-#     A BasesStyle style contains colors used for different components of a base.
-#     See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
-
-#     __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
-#     """
-#     def __init__(self, fill=None, outline=None, label=None, number=None):
-#         """Basesstyle constructor from given colors for different components.
-#         At least one argument should be given.
-
-#         Args:
-#             fill (Hex): color of inner part of base
-#             outline (Hex): color of outline of base
-#             label (Hex): base text (name) color
-#             number  (Hex): base number color
-
-#         Examples:
-#             >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
-#         """
-#         self._color = {}
-#         self.update(fill, outline, label, number)
-
-#     def update(self, fill=None, outline=None, label=None, number=None):
-#         """Update component _colors.
-#         Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
-#         """
-#         # if fill is None and outline is None and label is None and number is None:
-#         #     raise Exception("At least one should not be None")
-#         if fill is not None:
-#             self._color["fill"] = Color(fill)
-#         if outline is not None:
-#             self._color["outline"] = Color(outline)
-#         if label is not None:
-#             self._color["label"] = Color(label)
-#         if number is not None:
-#             self._color["number"] = Color(number)
-
-#     def __str__(self):
-#         order = ['fill', 'outline', 'label', 'number']
-#         lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color]
-#         return ",".join(lst)
-
-#     def cmd(self):
-#         order = ['fill', 'outline', 'label', 'number']
-#         lst = ["{}={}".format(k, (self._color[k]).get_hex_l()) for k in order if k in self._color and not self._color[k] == COLOR_DEFAULT[baseArgMap[k]]]
-#         return ",".join(lst)
 
 #################
 #               #
@@ -238,7 +186,7 @@ class _DefaultObj:
         res = {}
         for par in self.params:
             val = self.values[par]
-            if not val == self.default[par]:
+            if val is not None and not val == self.default[par]:
                 if isinstance(val, Color):
                     res[par] = val.get_hex_l()
                 else:
@@ -278,7 +226,6 @@ class _Highlight(_DefaultObj):
 
     def to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
-
 
 
 class BasesStyle(_DefaultObj):
@@ -322,6 +269,30 @@ class BasesStyle(_DefaultObj):
             self.default[par] = val
         return ",".join(k+"="+v for k, v in self._get_diff().items() if v is not None)
 
+
+# For aux BP
+
+BP_DEFAULT = {'edge5': 'wc', 'edge3': 'wc', 'stericity': 'cis', 'color': Color('blue'), 'thickness': 1}
+BP_CHOICES = {'edge5': ['wc', 'h', 's'], 'edge3': ['wc', 'h', 's'], 'stericity': ['cis', 'trans']}
+
+class _BPStyle(_DefaultObj):
+    def __init__(self, **kwargs):
+        super().__init__(**BP_DEFAULT)
+        for key, val in BP_CHOICES.items():
+            if key in kwargs:
+                try:
+                    assert kwargs[key] in val
+                    self.values[key] = kwargs[key]
+                except AssertionError:
+                    raise TypeError('Value of {} should be one of {}'.format(key, val))
+        if 'color' in kwargs:
+            self.values['color'] = Color(kwargs['color'])
+        if 'thickness' in kwargs:
+            self.values['thickness'] = float(kwargs['thickness'])
+
+    def to_cmd(self, color):
+        self.default['color'] = color
+        return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
 #################
 #               #

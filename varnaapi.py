@@ -5,7 +5,7 @@ from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 import subprocess
 
-from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation
+from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle
 
 __version__ = '0.1.0'
 
@@ -29,101 +29,6 @@ def set_VARNA(path):
     _VARNA_PATH = path
 
 
-#################
-#               #
-#  Annotation   #
-#               #
-#################
-
-# class _Annotation:
-#     """Basic Annotation
-#     """
-#     def __init__(self, text, type, color="#000000", size=10):
-#         self.text = text
-#         self.type = type
-#         self.color = color
-#         self.size = size #: int: font size
-
-#     def asdict(self):
-#         return {'text': self.text, 'type': self.type, 'color': self.color,
-#                 'size': self.size}
-
-#     @abc.abstractmethod
-#     def to_cmd(self):
-#         pass
-
-
-class _ObjectAnnotation(_Annotation):
-    def __init__(self, text, type, anchor, color="#000000", size=10):
-        super().__init__(text, type, color, size)
-        self.anchor = anchor
-
-    def asdict(self):
-        d = super().asdict()
-        d['anchor'] = self.anchor + 1
-        return d
-
-    def to_cmd(self):
-        return "{text}:type={type},anchor={anchor},color={color},size={size}"\
-            .format(**self.asdict())
-
-
-class BaseAnnotation(_Annotation):
-    def __init__(self, text:str, anchor:int, color="#000000", size=12):
-        """Annoation on a base.
-
-        Args:
-            text: Annotation caption
-            anchor: Index of base to annotate
-            color (Hex): Annotation color
-            size (int): Font size
-        """
-        super().__init__(text, 'B', int(anchor), color, size)
-
-
-class LoopAnnotation(_Annotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
-    Argument `anchor` can be index of any base in the loop of interest.
-    """
-    def __init__(self, text, anchor, color="#000000", size=12):
-        super().__init__(text, 'L', int(anchor), color, size)
-
-
-class HelixAnnotation(_ObjectAnnotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
-    Argument `anchor` can be index of any base in the helix of interest.
-    """
-    def __init__(self, text, anchor, color="#000000", size=12):
-        super().__init__(text, 'H', int(anchor), color, size)
-
-
-class StaticAnnotation(_Annotation):
-    def __init__(self, text, x, y, color="#000000", size=12):
-        """Annotation on a specified position in VARNA drawing.
-        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
-        However, arguments `x` and `y` are needed to specify annotation position.
-
-        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
-
-        Args:
-            x (int): x-coordinate of position
-            y (int): y-ccordinate of position
-
-        Examples:
-            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
-        """
-        super().__init__(text, 'P', (int(x), int(y)),  color, size)
-
-# def is_hex_color(color):
-#     match = HEX.search(color)
-#     if match:
-#         return True
-#     return False
-
-# def assert_hex_color(color):
-#     if not is_hex_color(color):
-#         raise Exception("{} is not a valid Hex color code".format(color))
-#     return color.upper()
 
 
 def assert_valid_interval(length, *args):
@@ -212,7 +117,7 @@ class VARNA(VarnaConfig):
         self.bases_styles = {}
         self.annotations = []
 
-    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='#0000FF', thickness:float=1.0):
+    def add_aux_BP(self, i:int, j:int, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -225,16 +130,8 @@ class VARNA(VarnaConfig):
             thickness: Base-pair thickness
         """
         assert_valid_interval(self.length, i, j)
-        if edge5 not in ['wc', 's', 'h']:
-            raise Exception("edge5 should be one of wc, s, and h")
-        if edge3 not in ['wc', 's', 'h']:
-            raise Exception("edge3 should be one of wc, s, and h")
-        if stericity not in ['cis', 'trans']:
-            raise Exception("stericity should be either cis or trans")
-        color = assert_hex_color(color)
-        assert_is_number('thickness', thickness)
 
-        self.aux_BPs.append((i+1, j+1, color, thickness, edge5, edge3, stericity))
+        self.aux_BPs.append((i+1, j+1, _BPStyle(**{k: v for k, v in kwargs.items() if v is not None})))
 
     def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
         """Highlights a region by drawing a polygon of predefined radius,
@@ -342,10 +239,15 @@ class VARNA(VarnaConfig):
             cmd += self._title.to_cmd()
 
         # Aux Base pairs
-        # if len(self.aux_BPs) > 0:
-        #     auxbps = ["({},{}):color={},thickness={},edge5={},edge3={},stericity={}"
-        #               .format(*t) for t in self.aux_BPs]
-        #     cmd += " -auxBPs \"{}\"".format(";".join(auxbps))
+        if len(self.aux_BPs) > 0:
+            res = []
+            for i, j, style in self.aux_BPs:
+                s = "({},{})".format(i,j)
+                setting = style.to_cmd(self.get_params(complete=True)['bp'])
+                if not setting == "":
+                    s += ":"+setting
+                res.append(s)
+            cmd += ["-auxBPs", ";".join(res)]
 
         # Highlight Region
         if len(self.highlight_regions) > 0:
