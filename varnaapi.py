@@ -62,55 +62,11 @@ def _parse_vienna(ss):
             res[ii],res[i] = i,ii
     return res
 
-class VARNA(VarnaConfig):
-    def __init__(self, *args, **kwargs):
-        """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
-        If sequence and structure have different size, the larger one is used
-        and ` `s or `.`s will be added to sequence or structure to complement.
 
-        Args:
-            seq: Raw nucleotide sequence for the displayed RNA.
-                 Each base must be encoded in a single character.
-                 Letters others than `A`, `C`, `G`, `U` and space are tolerated.
-            structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
-
-              - Dot-Bracket Notation (DBN)
-              - List of pair of int representing a list of base-pairs
-              - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
-
-        """
+class BasicDraw(VarnaConfig):
+    def __init__(self):
         super().__init__()
-        self._init_features()
-        self._read_input(*args, **kwargs)
 
-    def _read_input(self, seq=None, structure=None):
-        self.length = -1
-        self.structure = []
-        self.sequence = ""
-
-        if structure is not None:
-            if isinstance(structure, list):
-                if len(structure) > 0:
-                    first = structure[0]
-                    if len(first)==1:
-                        self.structure = check_structure(structure)
-                    elif len(first)==2:
-                        self.structure = _bp_to_struct(structure)
-                    else:
-                        raise Exception("Unrecognized structure format for %s"%(structure))
-            # Dot-Bracket Notation
-            elif isinstance(structure, str):
-                self.structure = _parse_vienna(structure)
-                self.dbn = structure
-            self.length = len(self.structure)
-        if seq is not None:
-            self.length = max(self.length,len(seq))
-            self.sequence = seq
-        # Now we know the length, let's extend the sequence and structure if necessary
-        self.sequence += " "*(self.length-len(self.sequence))
-        self.structure += [-1]*(self.length-len(self.structure))
-
-    def _init_features(self):
         self.aux_BPs = []
         self.highlight_regions = []
         self._title = None
@@ -154,6 +110,151 @@ class VARNA(VarnaConfig):
         """
         self._title = _Title(title, color, size)
 
+    def add_bases_style(self, style:BasesStyle, bases:list):
+        """Apply a [BasesStyle][varnaapi.BasesStyle] to a list of positions.
+        If a position is assigned to more than one styles,
+        one of them will be randomly used.
+
+        Args:
+            style: Style to apply
+            bases: List of 0-indexed positions
+
+        Examples:
+            >>> style1 = BasesStyle(fill="#FF0000")
+            >>> style2 = BasesStyle(fill="#FFFF00" outline="#00FF00")
+            >>> varna.add_bases_style(style1, [0,2,4])
+            >>> varna.add_bases_style(setye1, [10,11,12])
+            >>> varna.add_bases_style(style2, [4,5,6,7])
+
+        """
+        if not isinstance(style, BasesStyle):
+            raise Exception("style should be BasesStyle object")
+        if len(bases) > 0:
+            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
+
+    def add_annotation(self, annotation:_Annotation):
+        """Add an annotation.
+        Argument should be a valid [Annotation](annotation.md) object
+
+        Examples:
+            >>> a = LoopAnnotation("L1", 6, color="#FF00FF")
+            >>> varna.add_annotation(a)
+        """
+        # Assert is annotation
+        if not isinstance(annotation, _Annotation):
+            raise Exception("Should be a valid annotation object")
+        self.annotations.append(annotation)
+
+    def _gen_command(self):
+        """
+        Return command to run VARNA
+        """
+        cmd = ['java', '-cp', _VARNA_PATH, 'fr.orsay.lri.varna.applications.VARNAcmd']
+
+        cmd += self._gen_input_cmd()
+
+        cmd += ['-o', self.output]
+
+        cmd += self._gen_param_cmd()
+
+        # Title cmd
+        if self._title is not None:
+            cmd += self._title.to_cmd()
+
+        # Aux Base pairs
+        if len(self.aux_BPs) > 0:
+            res = []
+            for i, j, style in self.aux_BPs:
+                s = "({},{})".format(i,j)
+                setting = style.to_cmd(self.get_params(complete=True)['bp'])
+                if not setting == "":
+                    s += ":" + setting
+                res.append(s)
+            cmd += ["-auxBPs", ";".join(res)]
+
+        # Highlight Region
+        if len(self.highlight_regions) > 0:
+            res = []
+            for item in self.highlight_regions:
+                s = "{}-{}".format(item[0], item[1])
+                setting = item[2].to_cmd()
+                if not setting == "":
+                    s += ":" + setting
+                res.append(s)
+            cmd += ['-highlightRegion', ';'.join(res)]
+
+        # BasesStyles
+        styles = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNum'}
+        styles_dafault = {v: self.get_params().get(v) for v in styles.values() if v in self.get_params()}
+        for ind, (style, bases) in enumerate(self.bases_styles.items()):
+            s = style.to_cmd(**styles_dafault)
+            if not s == "":
+                cmd += ["-basesStyle{}".format(ind + 1), s]
+                cmd += ["-applyBasesStyle{}on".format(ind + 1), ','.join(map(str, bases))]
+
+        # Annotations
+        if len(self.annotations) > 0:
+            cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
+
+        return cmd
+
+    def _gen_input_cmd(self):
+        pass
+
+    def savefig(self, output):
+        """
+        Call VARNA to draw and store the paint in output
+        """
+        self.output = output
+        cmd = self._gen_command()
+        print(cmd)
+        subprocess.run(cmd)
+
+
+class VARNA(BasicDraw):
+    def __init__(self, sequence=None, structure=None):
+        """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
+        If sequence and structure have different size, the larger one is used
+        and ` `s or `.`s will be added to sequence or structure to complement.
+
+        Args:
+            seq: Raw nucleotide sequence for the displayed RNA.
+                 Each base must be encoded in a single character.
+                 Letters others than `A`, `C`, `G`, `U` and space are tolerated.
+            structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
+
+              - Dot-Bracket Notation (DBN)
+              - List of pair of int representing a list of base-pairs
+              - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
+
+        """
+        super().__init__()
+
+        self.length = -1
+        self.structure = []
+        self.sequence = ""
+
+        if structure is not None:
+            if isinstance(structure, list):
+                if len(structure) > 0:
+                    first = structure[0]
+                    if len(first)==1:
+                        self.structure = check_structure(structure)
+                    elif len(first)==2:
+                        self.structure = _bp_to_struct(structure)
+                    else:
+                        raise Exception("Unrecognized structure format for %s"%(structure))
+            # Dot-Bracket Notation
+            elif isinstance(structure, str):
+                self.structure = _parse_vienna(structure)
+                self.dbn = structure
+            self.length = len(self.structure)
+        if sequence is not None:
+            self.length = max(self.length,len(sequence))
+            self.sequence = sequence
+        # Now we know the length, let's extend the sequence and structure if necessary
+        self.sequence += " "*(self.length-len(self.sequence))
+        self.structure += [-1]*(self.length-len(self.structure))
 
     def format_structure(self):
         """Return secondary structure in dot-brackaet notation
@@ -182,118 +283,13 @@ class VARNA(VarnaConfig):
                 break
         return "".join(res)
 
-
-
-    def add_bases_style(self, style:BasesStyle, bases:list):
-        """Apply a [BasesStyle][varnaapi.BasesStyle] to a list of positions.
-        If a position is assigned to more than one styles,
-        one of them will be randomly used.
-
-        Args:
-            style: Style to apply
-            bases: List of 0-indexed positions
-
-        Examples:
-            >>> style1 = BasesStyle(fill="#FF0000")
-            >>> style2 = BasesStyle(fill="#FFFF00" outline="#00FF00")
-            >>> varna.add_bases_style(style1, [0,2,4])
-            >>> varna.add_bases_style(setye1, [10,11,12])
-            >>> varna.add_bases_style(style2, [4,5,6,7])
-
-        """
-        if not isinstance(style, BasesStyle):
-            raise Exception("style should be BasesStyle object")
-        if len(bases) > 0:
-            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
-
-
-    def add_annotation(self, annotation:_Annotation):
-        """Add an annotation.
-        Argument should be a valid [Annotation](annotation.md) object
-
-        Examples:
-            >>> a = LoopAnnotation("L1", 6, color="#FF00FF")
-            >>> varna.add_annotation(a)
-        """
-        # Assert is annotation
-        if not isinstance(annotation, _Annotation):
-            raise Exception("Should be a valid annotation object")
-        self.annotations.append(annotation)
-
-    def _gen_command(self):
-        """
-        Return command to run VARNA
-        """
-        cmd = ['java', '-cp', _VARNA_PATH, 'fr.orsay.lri.varna.applications.VARNAcmd']
-        # cmd = "java -cp {} fr.orsay.lri.varna.applications.VARNAcmd".format(_VARNA_PATH)
-
-        cmd += self._gen_input_cmd()
-
-        cmd += ['-o', self.output]
-        # cmd += " -o {}".format(self.output)
-
-        cmd += self._gen_param_cmd()
-
-        # Title cmd
-        if self._title is not None:
-            cmd += self._title.to_cmd()
-
-        # Aux Base pairs
-        if len(self.aux_BPs) > 0:
-            res = []
-            for i, j, style in self.aux_BPs:
-                s = "({},{})".format(i,j)
-                setting = style.to_cmd(self.get_params(complete=True)['bp'])
-                if not setting == "":
-                    s += ":"+setting
-                res.append(s)
-            cmd += ["-auxBPs", ";".join(res)]
-
-        # Highlight Region
-        if len(self.highlight_regions) > 0:
-            res = []
-            for item in self.highlight_regions:
-                s = "{}-{}".format(item[0], item[1])
-                setting = item[2].to_cmd()
-                if not setting == "":
-                    s += ":"+setting
-                res.append(s)
-            cmd += ['-highlightRegion', ';'.join(res)]
-
-        # BasesStyles
-        styles = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNum'}
-        styles_dafault = {v: self.get_params().get(v) for v in styles.values() if v in self.get_params()}
-        for ind, (style, bases) in enumerate(self.bases_styles.items()):
-            s = style.to_cmd(**styles_dafault)
-            if not s == "":
-                cmd += ["-basesStyle{}".format(ind+1), s]
-                cmd += ["-applyBasesStyle{}on".format(ind+1), ','.join(map(str, bases))]
-
-        # Annotations
-        if len(self.annotations) > 0:
-            cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
-
-        return cmd
-
     def _gen_input_cmd(self):
         return ['-sequenceDBN', self.sequence, '-structureDBN', self.format_structure()]
-        # return " -sequenceDBN \"{}\" -structureDBN \"{}\"".format(self.sequence, self.format_structure())
-
-    def savefig(self, output):
-        """
-        Call VARNA to draw and store the paint in output
-        """
-        self.output = output
-        cmd = self._gen_command()
-        print(cmd)
-        # os.popen(cmd).close()
-        subprocess.run(cmd)
 
     def __repr__(self):
-        return repr((self.format_structure(),self.sequence))
+        return repr((self.format_structure(), self.sequence))
 
-
-class Comparison(VARNA):
+class Comparison(BasicDraw):
     """Drawing of two aligned RNAs.
     Unlike classic [VARNA][varnaapi.VARNA] mode,
     both sequences and structures __MUST__ be specified and have the same size.
@@ -307,9 +303,11 @@ class Comparison(VARNA):
         strcuture2 (str): Sets the second secondary structure in Doc-Bracket Notation
     """
 
-    def _read_input(self, seq1, structure1, seq2, structure2):
+    def __init__(self, seq1, structure1, seq2, structure2):
         if not (len(seq1) == len(structure1) == len(seq2) == len(structure2)):
             raise Exception("All length should be equal")
+        super().__init__()
+
         self.seq1 = seq1
         self.structure1 = structure1
         self.seq2 = seq2
@@ -323,7 +321,7 @@ class Comparison(VARNA):
         return repr((self.seq1, self.structure1, self.seq2, self.structure2))
 
 
-class Motif(VARNA):
+class Motif(BasicDraw):
     """Special class for motif drawing.
     A motif is a rooted ordered tree, similar to a secondary structure,
     but whose leaves may represent base paired positions, named open base
@@ -358,14 +356,15 @@ class Motif(VARNA):
             positions for all `*`.
 
     """
-    def _read_input(self, motif, sequence=None):
+    def __init__(self, motif, sequence=None):
+        super().__init__()
+
         seq = ""
         struct = ""
         extra_bps = []
         pos = 0
-        for i in range(len(motif)):
-            c = motif[i]
-            if c=="*":
+        for i, c in enumerate(motif):
+            if c == "*":
                 if sequence is not None and not sequence[i] == '*':
                     raise Exception("Motif and sequence are not compatible at position {}".format(i))
                 extra_bps.append((pos + 1, pos + 2))
