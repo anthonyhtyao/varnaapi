@@ -4,6 +4,7 @@ import abc
 from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 import subprocess
+from deprecated import deprecated
 
 from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle
 
@@ -211,7 +212,7 @@ class BasicDraw(VarnaConfig):
         subprocess.run(cmd)
 
 
-class VARNA(BasicDraw):
+class Structure(BasicDraw):
     def __init__(self, sequence=None, structure=None):
         """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
         If sequence and structure have different size, the larger one is used
@@ -288,6 +289,12 @@ class VARNA(BasicDraw):
 
     def __repr__(self):
         return repr((self.format_structure(), self.sequence))
+
+
+@deprecated("Class has been renamed 'Structure'")
+def VARNA(*args, **kwargs):
+    return Structure(*args, **kwargs)
+
 
 class Comparison(BasicDraw):
     """Drawing of two aligned RNAs.
