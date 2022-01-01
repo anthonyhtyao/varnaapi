@@ -1,8 +1,22 @@
 # Varna Parameter Setting
 
 from numbers import Real
+import yaml
 from colour import Color
 
+
+# Define yaml-related function for Color object
+def color_representer(dumper, data):
+    return dumper.represent_scalar('!color', data.get_hex_l())
+
+
+def color_constructor(loader, node):
+    value = loader.construct_scalar(node)
+    return Color(value)
+
+
+yaml.add_representer(Color, color_representer)
+yaml.add_constructor('!color', color_constructor)
 
 # HEX = re.compile('^#(?:[0-9a-fA-F]{3}){1,2}$')
 
@@ -401,7 +415,6 @@ class VarnaConfig:
             except TypeError as e:
                 print(e)
 
-
     def get_params(self, complete=False):
         """Get parameters with value in dictionary
         By default, only the parameters with value different than the default are returned.
@@ -451,6 +464,16 @@ class VarnaConfig:
                 cmd.append('-' + par)
                 cmd.append(str(val))
         return cmd
+
+    def dump_param(self, filename):
+        with open(filename, 'w') as f:
+            yaml.dump(self.get_params(complete=True), f)
+
+
+    def load_param(self, filename):
+        with open(filename, 'r') as f:
+            self.update(**yaml.load(f, Loader=yaml.Loader))
+
 
     # def set_zoom_level(self, level:float):
     #     """Defines the level of zoom and zoom increment used to display the RNA within this panel"""
