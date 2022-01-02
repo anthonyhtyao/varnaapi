@@ -394,6 +394,34 @@ class StaticAnnotation(_Annotation):
         """
         super().__init__(text, 'P', (int(x), int(y)),  color, size)
 
+CHEM_DEFAULT = {'glyph': 'arrow', 'dir': 'in', 'intensity': 1, 'color': Color('#0000B2')}
+CHEM_CHOICES = {'glyph': ['arrow', 'dot', 'pin', 'triangle'], 'dir': ['in', 'out']}
+
+class _ChemProb(_DefaultObj):
+    def __init__(self, **kwargs):
+        super().__init__(**CHEM_DEFAULT)
+        for key, val in CHEM_CHOICES.items():
+            if key in kwargs:
+                try:
+                    assert kwargs[key] in val
+                    self.values[key] = kwargs[key]
+                except AssertionError:
+                    raise TypeError('Value of {} should be one of {}'.format(key, val))
+        if 'color' in kwargs:
+            self.values['color'] = Color(kwargs['color'])
+        if 'intensity' in kwargs:
+            self.values['intensity'] = float(kwargs['intensity'])
+
+    def to_cmd(self):
+        return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
+
+
+#################
+#               #
+#     Main      #
+#               #
+#################
+
 
 class VarnaConfig:
     """Create default configuration for VARNA

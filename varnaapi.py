@@ -6,7 +6,7 @@ from colour import Color
 import subprocess
 from deprecated import deprecated
 
-from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle
+from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb
 
 __version__ = '0.1.0'
 
@@ -73,6 +73,8 @@ class BasicDraw(VarnaConfig):
         self._title = None
         self.bases_styles = {}
         self.annotations = []
+        self.chem_prob = []
+        self.length = 0
 
     def add_aux_BP(self, i:int, j:int, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
@@ -146,6 +148,13 @@ class BasicDraw(VarnaConfig):
             raise Exception("Should be a valid annotation object")
         self.annotations.append(annotation)
 
+    def add_chem_prob(self, i, **kwargs):
+        try:
+            assert i>=0 and i < self.length-1
+        except AssertionError:
+            raise Exception("Base should be in between 0 and {}".format(self.length-1))
+        self.chem_prob.append((int(i), _ChemProb(**kwargs)))
+
     def _gen_command(self):
         """
         Return command to run VARNA
@@ -196,6 +205,17 @@ class BasicDraw(VarnaConfig):
         # Annotations
         if len(self.annotations) > 0:
             cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
+
+        # Chem Prob
+        if len(self.chem_prob) > 0:
+            res = []
+            for i, style in self.chem_prob:
+                s = "{}-{}".format(i, i+1)
+                setting = style.to_cmd()
+                if not setting == "":
+                    s += ":" + setting
+                res.append(s)
+            cmd += ["-chemProb", ";".join(res)]
 
         return cmd
 
