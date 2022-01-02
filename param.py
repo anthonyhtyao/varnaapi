@@ -1,6 +1,5 @@
 # Varna Parameter Setting
 
-from numbers import Real
 import yaml
 from colour import Color
 
@@ -100,7 +99,7 @@ BOOLEAN_DEFAULT = {
 #               #
 #################
 
-NUMERIC_TYPE = {'border': tuple, 'bpIncrement': int, 'periodNum': Real, 'resolution': Real, 'rotation': Real, 'spaceBetweenBases': Real, 'zoom': Real}
+NUMERIC_TYPE = {'border': tuple, 'bpIncrement': float, 'periodNum': int, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
 """Allowed numeric parameters
     | Label             | Type  | Description                                                                                                                                                                                                    | Default|
@@ -123,7 +122,6 @@ NUMERIC_DEFAULT = {
     'spaceBetweenBases': 1,
     'zoom': 1
 }
-
 
 
 #################
@@ -161,33 +159,49 @@ PARAM_TYPE.update(COLOR_TYPE)
 PARAM_TYPE.update(NUMERIC_TYPE)
 PARAM_TYPE.update(CHOICES_TYPE)
 
-PARAM_DEFAULT = BOOLEAN_DEFAULT.copy()
-PARAM_DEFAULT.update(COLOR_DEFAULT)
-PARAM_DEFAULT.update(NUMERIC_DEFAULT)
-PARAM_DEFAULT.update(CHOICES_DEFAULT)
+_PARAM_DEFAULT = BOOLEAN_DEFAULT.copy()
+_PARAM_DEFAULT.update(COLOR_DEFAULT)
+_PARAM_DEFAULT.update(NUMERIC_DEFAULT)
+_PARAM_DEFAULT.update(CHOICES_DEFAULT)
 
 
-def _params_type_check(**params):
+PARAM_DEFAULT = _PARAM_DEFAULT.copy()
+
+
+def load_config(filename):
+    global PARAM_DEFAULT
+    with open(filename, 'r') as f:
+        params = yaml.load(f, Loader=yaml.Loader)
+    for par in PARAM_LIST:
+        val = params.get(par, default=None)
+        if val is not None:
+            val = _params_type_check(par, val)
+        PARAM_DEFAULT[par] = val
+
+
+def _params_type_check(par, val):
     """Private parameter type check.
     """
-    for par, val in params.items():
-        typ = PARAM_TYPE[par]
-        if typ == 'color':
-            try:
-                Color(val)
-            except ValueError as e:
-                raise TypeError(str(e))
-        elif par == 'border':
-            try:
-                assert isinstance(val[0], int) and isinstance(type(val[1]), int)
-            except AssertionError:
-                raise TypeError("Value for border should be a pair of integers")
-        elif typ == 'choices':
-            if val not in CHOICES_VALUE[par]:
-                raise TypeError('Value of {} should be one of {}'.format(par, CHOICES_VALUE[par]))
-        else:
-            if not isinstance(val, typ):
-                raise TypeError("The expected value type for {} is {} instead of {}".format('par', typ, type(val)))
+    typ = PARAM_TYPE[par]
+    if typ == 'color':
+        try:
+            val = Color(val)
+        except ValueError as e:
+            raise TypeError(str(e))
+    elif par == 'border':
+        try:
+            assert val is None or (isinstance(val[0], int) and isinstance(type(val[1]), int))
+        except AssertionError:
+            raise TypeError("Value for border should be a pair of integers")
+    elif typ == 'choices':
+        if val not in CHOICES_VALUE[par]:
+            raise TypeError('Value of {} should be one of {}'.format(par, CHOICES_VALUE[par]))
+    else:
+        try:
+            val = typ(val)
+        except:
+            raise TypeError("The expected value type for {} is {} instead of {}".format(par, typ, type(val)))
+    return val
 
 
 class _DefaultObj:
@@ -385,43 +399,56 @@ class VarnaConfig:
     """Create default configuration for VARNA
     """
     def __init__(self):
-        self._params = PARAM_DEFAULT.copy()
+        self._params = {key: None for key in PARAM_LIST}
+        self._loaded_params = {key: None for key in PARAM_LIST}
+
+    def _get_value(self, param):
+        if self._params[param] is not None:
+            return self._params[param]
+        elif self._loaded_params[param] is not None:
+            return self._loaded_params[param]
+        elif PARAM_DEFAULT[param] is not None:
+            return PARAM_DEFAULT[param]
+        else:
+            return _PARAM_DEFAULT[param]
 
     def _diff_param(self):
         """Get param name and value that is different than the default
         """
-        params = {p: self._params[p] for p in PARAM_LIST if not self._params[p] == PARAM_DEFAULT[p]}
-        if self._params['border'] is not None:
-            params['border'] = "{}x{}".format(*self._params['border'])
-
-
+        params = {}
+        for key in PARAM_LIST:
+            val = self._get_value(key)
+            default = _PARAM_DEFAULT[key]
+            if val is not None and not val == default:
+                params[key] = val
         return params
 
-    def update(self, **kwargs):
+    def update(self, loaded=False, **kwargs):
         """Easy way to update params value
         """
         # Assert argument is in the parameter list and type check
+        if loaded:
+            params = self._loaded_params
+        else:
+            params = self._params
         for key, value in kwargs.items():
             try:
                 assert key in PARAM_LIST
-                _params_type_check(**{key: value})
-                if PARAM_TYPE[key] == 'color':
-                    self._params[key] = Color(value)
-                else:
-                    self._params[key] = value
+                value = _params_type_check(key, value)
+                params[key] = value
             except AssertionError:
                 print('{} is not a valid parameter name'.format(key))
                 print('A valid argument is one of', ', '.join(PARAM_LIST))
             except TypeError as e:
                 print(e)
 
-    def get_params(self, complete=False):
+    def get_params(self, complete=True):
         """Get parameters with value in dictionary
         By default, only the parameters with value different than the default are returned.
         Set complete to True to get complete parameters.
 
         Args:
-            complete: Return complete parameters. Defaults to False
+            complete: Return complete parameters. Defaults to True
         """
         if complete:
             param = self._params.copy()
@@ -452,7 +479,7 @@ class VarnaConfig:
         """
 
         cmd = []
-        for par, val in self._diff_param().items():
+        for par, val in self.get_params(complete=False).items():
             typ = PARAM_TYPE[par]
             if typ == 'color':
                 cmd.append('-' + par)
@@ -472,7 +499,7 @@ class VarnaConfig:
 
     def load_param(self, filename):
         with open(filename, 'r') as f:
-            self.update(**yaml.load(f, Loader=yaml.Loader))
+            self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader))
 
 
     # def set_zoom_level(self, level:float):
