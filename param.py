@@ -415,6 +415,42 @@ class _ChemProb(_DefaultObj):
     def to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
+CM_DEFAULT = ["red", "blue", "green", "heat", "energy", "bw"]
+
+class _ColorMap:
+    def __init__(self, values, vMin, vMax, caption, style):
+        self.values = list(map(float, values))
+        if vMin is not None:
+            vMin = float(vMin)
+        self.vMin = vMin
+        if vMax is not None:
+            vMax = float(vMax)
+        self.vMax = vMax
+        self.caption = str(caption)
+        if isinstance(style, str):
+            if style not in CM_DEFAULT:
+                raise ValueError('Value for colormap style should be one of {}'.format(CM_DEFAULT))
+            self.style = style
+        elif isinstance(style, dict):
+            self.style = ';'.join("{}:{}".format(float(k), Color(v).get_hex_l()) for k,v in style.items())
+
+        else:
+            raise ValueError('Style should be either a string of {} or a dictionary'.format(CM_DEFAULT))
+
+    def to_cmd(self):
+        cmd = []
+        cmd += ['-colorMap', ';'.join(map(str, self.values))]
+        if self.caption != "":
+            cmd += ['-colorMapCaption', self.caption]
+        if self.vMin is not None:
+            cmd += ['-colorMapMin', self.vMin]
+        if self.vMax is not None:
+            cmd += ['-colorMapMax', self.vMax]
+        if self.style not in ['energy', '']:
+            cmd += ['-colorMapStyle', self.style]
+
+        return cmd
+
 
 #################
 #               #

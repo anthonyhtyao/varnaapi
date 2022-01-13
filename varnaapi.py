@@ -6,9 +6,8 @@ from colour import Color
 import subprocess
 from deprecated import deprecated
 
-from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb
+from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
 
-__version__ = '0.1.0'
 
 _VARNA_PATH="VARNAv3-93.jar"
 
@@ -28,9 +27,6 @@ def set_VARNA(path):
     """
     global _VARNA_PATH
     _VARNA_PATH = path
-
-
-
 
 def assert_valid_interval(length, *args):
     for i in args:
@@ -75,6 +71,7 @@ class BasicDraw(VarnaConfig):
         self.annotations = []
         self.chem_prob = []
         self.length = 0
+        self.colormap = None
 
     def add_aux_BP(self, i:int, j:int, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
@@ -155,6 +152,9 @@ class BasicDraw(VarnaConfig):
             raise Exception("Base should be in between 0 and {}".format(self.length-1))
         self.chem_prob.append((int(i), _ChemProb(**kwargs)))
 
+    def add_colormap(self, values, vMin=None, vMax=None, caption="", style="energy"):
+        self.colormap = _ColorMap(values, vMin, vMax, caption, style)
+
     def _gen_command(self):
         """
         Return command to run VARNA
@@ -216,6 +216,10 @@ class BasicDraw(VarnaConfig):
                     s += ":" + setting
                 res.append(s)
             cmd += ["-chemProb", ";".join(res)]
+
+        # Color Map
+        if self.colormap is not None:
+            cmd += self.colormap.to_cmd()
 
         return cmd
 

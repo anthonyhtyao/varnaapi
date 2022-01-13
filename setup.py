@@ -11,7 +11,7 @@ def read_version(fpath):
     raise Exception('Version not found')
 
 
-VERSION = read_version('./varnaapi.py')
+VERSION = read_version('./__init__.py')
 
 
 with open("README.md", "r") as fh:
@@ -40,6 +40,6 @@ setup(name='varnaapi',
       author_email='hua-ting.yao@polytechnique.edu',
       url='https://gitlab.inria.fr/amibio/varna-api',
       classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
-      py_modules=['varnaapi'],
+      py_modules=['varnaapi', 'param'],
       python_requires='>=3'
       )
