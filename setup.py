@@ -41,5 +41,6 @@ setup(name='varnaapi',
       url='https://gitlab.inria.fr/amibio/varna-api',
       classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
       py_modules=['varnaapi', 'param'],
+      install_requires=['colour', 'deprecated', 'pyyml'],
       python_requires='>=3'
       )
