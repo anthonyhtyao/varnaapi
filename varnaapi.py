@@ -6,6 +6,8 @@ from colour import Color
 import subprocess
 from deprecated import deprecated
 
+from IPython.display import Image, display, SVG
+
 from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
 
 
@@ -226,7 +228,7 @@ class BasicDraw(VarnaConfig):
     def _gen_input_cmd(self):
         pass
 
-    def savefig(self, output):
+    def savefig(self, output, show=False):
         """
         Call VARNA to draw and store the paint in output
         """
@@ -234,6 +236,12 @@ class BasicDraw(VarnaConfig):
         cmd = self._gen_command()
         print(cmd)
         subprocess.run(cmd)
+
+        if show:
+            if output[-3:] == 'png':
+                display(Image(filename=output))
+            elif output[-3:] == 'svg':
+                display(SVG(filename=output))
 
 
 class Structure(BasicDraw):

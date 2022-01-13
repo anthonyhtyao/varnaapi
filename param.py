@@ -190,7 +190,7 @@ def _params_type_check(par, val):
             raise TypeError(str(e))
     elif par == 'border':
         try:
-            assert val is None or (isinstance(val[0], int) and isinstance(type(val[1]), int))
+            assert val is None or (isinstance(val[0], int) and isinstance(val[1], int))
         except AssertionError:
             raise TypeError("Value for border should be a pair of integers")
     elif typ == 'choices':
