@@ -1,4 +1,4 @@
-VARNA API is a Python interface for [VARNA](http://varna.lri.fr/index.php), a Java lightweight component and applet for drawing the RNA secondary structure.
+VARNA API is a Python interface for [VARNA](http://varna.lri.fr/index.php) (v3-93), a Java lightweight component and applet for drawing the RNA secondary structure.
 VARNA allows users to produce drawing in a non-iteractive way via command line.
 However, the command line might be massive and complicate in some use cases.
 VARNA API aims to simplify such process.
@@ -13,7 +13,7 @@ on secondary structure `((((((.((((((........)))))).((((((.......))))))..))))))`
 java -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "                                                       " -structureDBN "((((((.((((((........)))))).((((((.......))))))..))))))" -o example.png -algorithm radiate -auxBPs "(14,20):color=#FF00FF,thickness=1.0,edge5=s,edge3=wc,stericity=cis" -highlightRegion "11-21:radius=15.0,fill=#9999FF,outline=#3333FF"
 ```
 
-The equivalence in python is
+The equivalence using VARNA API would be
 ```python
 from varnaapi import VARNA
 v = VARNA(structure="((((((.((((((........)))))).((((((.......))))))..))))))")
@@ -28,26 +28,35 @@ python3 -m pip install varnaapi
 
 ## Usage
 Here, we show the basic usage of varnaapi. Please refer the [API](https://htyao.gitlab.io/varna-api/varna) page for more details.
-The first thing after importing `varnaapi` is to setup the location of VARNA used.
-The default is `VARNAv3-93.jar` in the current folder.
+The first thing after importing `varnaapi` is to setup the location of VARNA to use.
+
+!!! note "By default, the library assumes the VARNA v3-93 in the current folder is used (`./VARNAv3-93.jar`)"
+
 ```python
 import varnaapi
 varnaapi.set_VARNA(path_to_VARNA)
 ```
-Each drawing in VARNA is an object called `VARNA` created from given secondary structure or/and RNA sequence.
+Each drawing in VARNA is an object of class inherited from [BasicDraw][varnaapi.BasicDraw]. The standard class to draw from given secondary structure or/and RNA sequence is [Structure][varnaapi.Structure].
 ```python
 ss = "((((((.((((((........)))))).((((((.......))))))..))))))"
-v = varnaapi.VARNA(structure=ss)
+v = varnaapi.Structure(structure=ss)
 ```
-Then we can add operations on drawing by calling object functions, such as `VARNA.set_algorithm()` to choose a drawing algorithm, `VARNA.add_highlight_region()` to highlight a region etc. 
+
+The object contains a member function to save the drawing into
+
+```python
+v.savefig(path_to_store)
+```
+
+### Configuration
+
+### Operations
+Then we can add operations on drawing by calling member functions, such as `VARNA.set_algorithm()` to choose a drawing algorithm, `VARNA.add_highlight_region()` to highlight a region etc. 
 ```python
 v.set_algorithm('line')
 v.add_highlight_region(0, 5, radius=20)
 ```
 Finally, we can draw the secondary structure
-```python
-v.savefig(path_to_store)
-```
 
 ## Credits
 Please kindly cite VARNA [supporting manuscript](https://doi.org/10.1093/bioinformatics/btp250) if you use VARNA API in your research.

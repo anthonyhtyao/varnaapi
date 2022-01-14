@@ -2,15 +2,16 @@ In VARNA API, we offer three Python classes [VARNA](#varnaapi.VARNA), [Compariso
 The first two correspond to the classic and the comparison mode in VARNA. The last one is the special case for motif drawing.
 Both [Comparison](#varnaapi.Comparison) and [Motif](#varnaapi.Motif) are inherited classes of [VARNA](#varnaapi.VARNA).
 
-::: varnaapi
+::: varnaapi.models
     selection:
-      members: ["VARNA"]
+      members: ["Structure"]
+      inherited_members: True
 
-::: varnaapi
+::: varnaapi.models
     selection:
       members: ["Comparison"]
 
-::: varnaapi
+::: varnaapi.models
     selection:
       filters: ["!savefig"]
       members: ["Motif"]

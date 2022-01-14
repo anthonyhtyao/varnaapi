@@ -114,7 +114,7 @@ class BasicDraw(VarnaConfig):
         self._title = _Title(title, color, size)
 
     def add_bases_style(self, style:BasesStyle, bases:list):
-        """Apply a [BasesStyle][varnaapi.BasesStyle] to a list of positions.
+        """Apply a [BasesStyle][varnaapi.param.BasesStyle] to a list of positions.
         If a position is assigned to more than one styles,
         one of them will be randomly used.
 
@@ -252,22 +252,22 @@ class BasicDraw(VarnaConfig):
         self.savefig(tmp.name, show=True)
 
 class Structure(BasicDraw):
+    """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
+    If sequence and structure have different size, the larger one is used
+    and ` `s or `.`s will be added to sequence or structure to complement.
+
+    Args:
+        seq: Raw nucleotide sequence for the displayed RNA.
+             Each base must be encoded in a single character.
+             Letters others than `A`, `C`, `G`, `U` and space are tolerated.
+        structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
+
+            - Dot-Bracket Notation (DBN)
+            - List of pair of int representing a list of base-pairs
+            - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
+
+    """
     def __init__(self, sequence=None, structure=None):
-        """Classic VARNA drawing mode. Constructor from given RNA sequence or/and secondary structure.
-        If sequence and structure have different size, the larger one is used
-        and ` `s or `.`s will be added to sequence or structure to complement.
-
-        Args:
-            seq: Raw nucleotide sequence for the displayed RNA.
-                 Each base must be encoded in a single character.
-                 Letters others than `A`, `C`, `G`, `U` and space are tolerated.
-            structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
-
-              - Dot-Bracket Notation (DBN)
-              - List of pair of int representing a list of base-pairs
-              - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
-
-        """
         super().__init__()
 
         self.length = -1
@@ -445,14 +445,14 @@ class Motif(BasicDraw):
         return ["-sequenceDBN", self.sequence, "-structureDBN", self.structure]
 
     def set_dummy_bases_style(self, style):
-        """Set style for dummy bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """Set style for dummy bases. Argument is a [BasesStyle][varnaapi.param.BasesStyle] object.
         """
         if not isinstance(style, BasesStyle):
             raise Exception('The argument should be BasesStyle object')
         self.dummyBasesStyle = style
 
     def set_root_bases_style(self, style):
-        """Set style for root bases. Argument is a [BasesStyle][varnaapi.BasesStyle] object.
+        """Set style for root bases. Argument is a [BasesStyle][varnaapi.param.BasesStyle] object.
         """
         if not isinstance(style, BasesStyle):
             raise Exception('The argument should be BasesStyle object')

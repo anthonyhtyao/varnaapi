@@ -26,10 +26,10 @@ plugins:
           rendering:
             show_root_toc_entry: False
       watch:
-        - varnaapi.py
+        - src/varnaapi
 
 
 markdown_extensions:
   - footnotes
   - pymdownx.highlight
-  - pymdownx.superfences
+  - admonition

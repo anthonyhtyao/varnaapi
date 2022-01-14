@@ -142,7 +142,7 @@ BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
     | rnaviz | A small square is drawn at equal distance of the two partners                                          |
     | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
 
-    __See Also:__ [VARNA.set_bp_style][varnaapi.VARNA.set_bp_style]
+    __See Also:__ [VARNA.set_bp_style][varnaapi.param.VarnaConfig.set_bp_style]
 
 """
 
@@ -259,9 +259,9 @@ class _Highlight(_DefaultObj):
 class BasesStyle(_DefaultObj):
     """Defines a custom base-style, to be applied later to a set of bases.
     A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
+    See [\_\_init\_\_][varnaapi.param.BasesStyle.__init__] for more details.
 
-    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
+    __See Also:__ [VARNA.add_bases_style][varnaapi.Structure.add_bases_style]
     """
     def __init__(self, fill=None, outline=None, label=None, number=None):
         """Basesstyle constructor from given colors for different components.
@@ -281,7 +281,7 @@ class BasesStyle(_DefaultObj):
 
     def update(self, **kwargs):
         """Update component _colors.
-        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
+        Same rule as [\_\_init\_\_][varnaapi.param.BasesStyle.__init__]
         """
         # if fill is None and outline is None and label is None and number is None:
         #     raise Exception("At least one should not be None")
@@ -364,14 +364,14 @@ class BaseAnnotation(_Annotation):
         super().__init__(text, 'B', int(anchor), color, size)
 
 class LoopAnnotation(_Annotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
+    """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on a loop.
     Argument `anchor` can be index of any base in the loop of interest.
     """
     def __init__(self, text, anchor, color="#000000", size=12):
         super().__init__(text, 'L', int(anchor), color, size)
 
 class HelixAnnotation(_Annotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
+    """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on an helix.
     Argument `anchor` can be index of any base in the helix of interest.
     """
     def __init__(self, text, anchor, color="#000000", size=12):
@@ -380,7 +380,7 @@ class HelixAnnotation(_Annotation):
 class StaticAnnotation(_Annotation):
     def __init__(self, text, x, y, color="#000000", size=12):
         """Annotation on a specified position in VARNA drawing.
-        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
+        Unlike [BaseAnnotation][varnaapi.param.BaseAnnotation], argument `anchor` is omitted.
         However, arguments `x` and `y` are needed to specify annotation position.
 
         __Note:__ It is unrecommended to use static annotation unless you know what you're doing
@@ -530,7 +530,7 @@ class VarnaConfig:
         self.update(algorithm=algo)
 
     def set_bp_style(self, style):
-        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.BP_STYLES]
+        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.param.BP_STYLES]
 
         __Note:__ `lw` is set by default
 
