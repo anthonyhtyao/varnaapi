@@ -563,7 +563,7 @@ class VarnaConfig:
 
     def load_param(self, filename):
         with open(filename, 'r') as f:
-            self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader)})
+            self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader))
 
 
     # def set_zoom_level(self, level:float):
