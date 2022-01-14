@@ -496,15 +496,16 @@ class VarnaConfig:
         else:
             params = self._params
         for key, value in kwargs.items():
-            try:
-                assert key in PARAM_LIST
-                value = _params_type_check(key, value)
-                params[key] = value
-            except AssertionError:
-                print('{} is not a valid parameter name'.format(key))
-                print('A valid argument is one of', ', '.join(PARAM_LIST))
-            except TypeError as e:
-                print(e)
+            if value is not None:
+                try:
+                    assert key in PARAM_LIST
+                    value = _params_type_check(key, value)
+                    params[key] = value
+                except AssertionError:
+                    print('{} is not a valid parameter name'.format(key))
+                    print('A valid argument is one of', ', '.join(PARAM_LIST))
+                except TypeError as e:
+                    print(e)
 
     def get_params(self, complete=True):
         """Get parameters with value in dictionary
@@ -560,10 +561,9 @@ class VarnaConfig:
         with open(filename, 'w') as f:
             yaml.dump(self.get_params(complete=True), f)
 
-
     def load_param(self, filename):
         with open(filename, 'r') as f:
-            self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader))
+            self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader)})
 
 
     # def set_zoom_level(self, level:float):
