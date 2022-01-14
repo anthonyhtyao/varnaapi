@@ -173,7 +173,7 @@ def load_config(filename):
     with open(filename, 'r') as f:
         params = yaml.load(f, Loader=yaml.Loader)
     for par in PARAM_LIST:
-        val = params.get(par, default=None)
+        val = params.get(par, None)
         if val is not None:
             val = _params_type_check(par, val)
         PARAM_DEFAULT[par] = val
