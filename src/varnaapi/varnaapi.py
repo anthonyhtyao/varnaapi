@@ -8,7 +8,7 @@ from deprecated import deprecated
 
 from IPython.display import Image, display, SVG
 
-from param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
+from varnaapi.param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
 
 
 _VARNA_PATH="VARNAv3-93.jar"
