@@ -4,6 +4,7 @@ import abc
 from string import ascii_lowercase, ascii_uppercase
 from colour import Color
 import subprocess
+from tempfile import NamedTemporaryFile
 from deprecated import deprecated
 
 from IPython.display import Image, display, SVG
@@ -243,6 +244,12 @@ class BasicDraw(VarnaConfig):
             elif output[-3:] == 'svg':
                 display(SVG(filename=output))
 
+    def show(self, extension='png'):
+        """Show the drawing
+        Equivalent to `savefig(tmp, show=True)` where tmp is a temporary file
+        """
+        tmp = NamedTemporaryFile(suffix='.'+extension)
+        self.savefig(tmp.name, show=True)
 
 class Structure(BasicDraw):
     def __init__(self, sequence=None, structure=None):
