@@ -62,7 +62,7 @@ The later one creates a temporary file in `png` format for drawing.
 ### Configuration
 
 In VARNA, one can chose the structure drawing algorithm, change the style for base pair, or hide backbone in drawing etc.
-The full list of parameters with default value can be found here.
+The full list of parameters with default value can be found [here](config).
 In library, the easiest way to modify these parameters is through the member function `#!python BasicDraw.update()`.
 Some parameters, such as algorithm, can be set up via specific function. The rest will be supported in future update.
 

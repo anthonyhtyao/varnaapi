@@ -64,6 +64,7 @@ COLOR_DEFAULT = {
 
 BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
 """Boolean option list
+
     | Name              | Option                                                                                                                                        | Default |
     |-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|---------|
     | autoHelices       | Annotates each and every helix in the RNA with a unique `Hn` label                                                                            | False   |
@@ -102,9 +103,10 @@ BOOLEAN_DEFAULT = {
 NUMERIC_TYPE = {'border': tuple, 'bpIncrement': float, 'periodNum': int, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
 """Allowed numeric parameters
-    | Label             | Type  | Description                                                                                                                                                                                                    | Default|
-    |-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
-    | border | (int, int) | Sets the width and height of the panel border, <i>i.e.</i> the gap between the panel boundaries and those of the surface used to draw the RNA. Border setting is ignored if it's smaller than RNA draw. | N/A |
+
+    | Name              | Type  | Description                                                                                                                                                                                                    | Default|
+    |-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
+    | border            | (int, int) | Sets the width and height of the panel border, <i>i.e.</i> the gap between the panel boundaries and those of the surface used to draw the RNA. Border setting is ignored if it's smaller than RNA draw. | N/A |
     | bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      | 0.65 |
     | periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` | 10 |
     | resolution        | float | Chooses the resolution of a bitmap PNG export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           | 1 |
@@ -134,19 +136,26 @@ CHOICES_PARAMS = ['algorithm', 'bpStyle']
 CHOICES_TYPE = {k: 'choices' for k in CHOICES_PARAMS}
 
 BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
-"""Allowed options for base-pair style
-    | Label  | Description                                                                                            |
-    |--------|--------------------------------------------------------------------------------------------------------|
-    | none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures            |
-    | simple | A simple line is used to draw any base-pair, regardless of its type                                    |
-    | rnaviz | A small square is drawn at equal distance of the two partners                                          |
-    | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
+"""Allowed options for base-pair style (`bpStyle`), default value is `lw`
 
-    __See Also:__ [VARNA.set_bp_style][varnaapi.param.VarnaConfig.set_bp_style]
+    | Label  | Description                                                                                                      |
+    |--------|------------------------------------------------------------------------------------------------------------------|
+    | none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures                      |
+    | simple | A simple line is used to draw any base-pair, regardless of its type                                              |
+    | rnaviz | A small square is drawn at equal distance of the two partners                                                    |
+    | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature (Default) |
 
+
+    Example:
+        >>> BasicDraw.update(bpStyle="simple")
 """
 
 ALGORITHMS = ['line', 'circular', 'radiate', 'naview']
+"""Allowed options for drawing algorithms (`algorithm`) are `line`, `circular`, `radiate`, and `naview`. The default value is `radiate`.
+
+    Example:
+        >>> BasicDraw.update(algorithm="line")
+"""
 
 CHOICES_VALUE = {'algorithm': ALGORITHMS, 'bpStyle': BP_STYLES}
 CHOICES_DEFAULT = {'algorithm': 'radiate', 'bpStyle': 'lw'}
