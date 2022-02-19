@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import setuptools
 from distutils.core import setup
 
@@ -11,7 +9,7 @@ def read_version(fpath):
     raise Exception('Version not found')
 
 
-VERSION = read_version('./varnaapi.py')
+VERSION = read_version('src/varnaapi/__init__.py')
 
 
 with open("README.md", "r") as fh:
@@ -40,6 +38,9 @@ setup(name='varnaapi',
       author_email='hua-ting.yao@polytechnique.edu',
       url='https://gitlab.inria.fr/amibio/varna-api',
       classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
+      packages=setuptools.find_packages('src'),
+      package_dir={'': 'src'},
       py_modules=['varnaapi'],
+      install_requires=['colour', 'deprecated', 'pyyml', 'IPython'],
       python_requires='>=3'
       )

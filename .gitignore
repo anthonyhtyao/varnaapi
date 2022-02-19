@@ -4,3 +4,5 @@ __pycache__
 *.svg
 site
 build
+dist
+varnaapi.egg-info
