@@ -41,6 +41,6 @@ setup(name='varnaapi',
       packages=setuptools.find_packages('src'),
       package_dir={'': 'src'},
       py_modules=['varnaapi'],
-      install_requires=['colour', 'deprecated', 'pyyml', 'IPython'],
+      install_requires=['colour', 'deprecated', 'pyyml', 'ipython'],
       python_requires='>=3'
       )
