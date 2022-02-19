@@ -453,9 +453,9 @@ class _ColorMap:
         if self.caption != "":
             cmd += ['-colorMapCaption', self.caption]
         if self.vMin is not None:
-            cmd += ['-colorMapMin', self.vMin]
+            cmd += ['-colorMapMin', str(self.vMin)]
         if self.vMax is not None:
-            cmd += ['-colorMapMax', self.vMax]
+            cmd += ['-colorMapMax', str(self.vMax)]
         if self.style not in ['energy', '']:
             cmd += ['-colorMapStyle', self.style]
 
