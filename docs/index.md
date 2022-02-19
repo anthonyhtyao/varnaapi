@@ -9,13 +9,13 @@ VARNA API aims to simplify such process.
 The command below highlights region 11-21 and adds a non-canonical base pair at position (14,20)
 on secondary structure `((((((.((((((........)))))).((((((.......))))))..))))))`.
 ```bash
-java -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "                                                       " -structureDBN "((((((.((((((........)))))).((((((.......))))))..))))))" -o example.png -algorithm radiate -auxBPs "(14,20):color=#FF00FF,thickness=1.0,edge5=s,edge3=wc,stericity=cis" -highlightRegion "11-21:radius=15.0,fill=#9999FF,outline=#3333FF"
+java -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "                                                       " -structureDBN "((((((.((((((........)))))).((((((.......))))))..))))))" -o example.png -auxBPs "(14,20):color=#ff00ff" -highlightRegion "11-21"
 ```
 
 The equivalence using VARNA API would be
 ```python
-from varnaapi import VARNA
-v = VARNA(structure="((((((.((((((........)))))).((((((.......))))))..))))))")
+from varnaapi import Structure
+v = Structure(structure="((((((.((((((........)))))).((((((.......))))))..))))))")
 v.add_highlight_region(10,20)
 v.add_aux_BP(13, 19, edge5="s", color="#FF00FF")
 v.savefig("example.png")
@@ -67,7 +67,7 @@ In library, the easiest way to modify these parameters is through the member fun
 Some parameters, such as algorithm, can be set up via specific function. The rest will be supported in future update.
 
 ```python
-v.update(algorithm='naview', baStyle='none', drawBackbone=False, np='#006400')
+v.update(algorithm='naview', bpStyle='none', drawBackbone=False, bp='#006400')
 ```
 
 !!! note "Color parameters"

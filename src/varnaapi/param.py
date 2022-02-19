@@ -468,7 +468,7 @@ class _ColorMap:
 #################
 
 
-class VarnaConfig:
+class _VarnaConfig:
     """Create default configuration for VARNA
     """
     def __init__(self):
@@ -497,7 +497,8 @@ class VarnaConfig:
         return params
 
     def update(self, loaded=False, **kwargs):
-        """Easy way to update params value
+        """Easy way to update params value.
+        The list of keyward arguments can be found [here](/config)
         """
         # Assert argument is in the parameter list and type check
         if loaded:
@@ -516,13 +517,13 @@ class VarnaConfig:
                 except TypeError as e:
                     print(e)
 
-    def get_params(self, complete=True):
+    def get_params(self, complete:bool=False):
         """Get parameters with value in dictionary
         By default, only the parameters with value different than the default are returned.
         Set complete to True to get complete parameters.
 
         Args:
-            complete: Return complete parameters. Defaults to True
+            complete: Return complete parameters.
         """
         if complete:
             param = self._params.copy()
@@ -544,7 +545,8 @@ class VarnaConfig:
         __Note:__ `lw` is set by default
 
         Example:
-            >>> varna.set_bp_style("simple")
+            >>> v = varnaapi.Structure()
+            >>> v.set_bp_style("simple")
         """
         self.update(bpStyle=style)
 
@@ -553,7 +555,7 @@ class VarnaConfig:
         """
 
         cmd = []
-        for par, val in self.get_params(complete=False).items():
+        for par, val in self.get_params().items():
             typ = PARAM_TYPE[par]
             if typ == 'color':
                 cmd.append('-' + par)

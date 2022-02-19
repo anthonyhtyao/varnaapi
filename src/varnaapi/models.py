@@ -9,7 +9,7 @@ from deprecated import deprecated
 
 from IPython.display import Image, display, SVG
 
-from varnaapi.param import VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
+from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
 
 
 _VARNA_PATH="VARNAv3-93.jar"
@@ -63,7 +63,7 @@ def _parse_vienna(ss):
     return res
 
 
-class BasicDraw(VarnaConfig):
+class BasicDraw(_VarnaConfig):
     def __init__(self):
         super().__init__()
 
@@ -76,7 +76,7 @@ class BasicDraw(VarnaConfig):
         self.length = 0
         self.colormap = None
 
-    def add_aux_BP(self, i:int, j:int, **kwargs):
+    def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -85,12 +85,12 @@ class BasicDraw(VarnaConfig):
             edge5: Edge 5' used for interaction in non-canonical base-pairs, as defined by the Leontis/Westhof classification of base-pairs. Admissible values are __wc__ (Watson/Crick edge), __h__ (Hoogsteen edge) and __s__ (Sugar edge).
             edge3: Edge 3' used for interaction in non-canonical base-pairs. Admissible values are __wc__, __h__ and __s__.
             stericity: Orientation of the strands. Admissible values are __cis__ and __trans__
-            color (Hex): Base-pair color in Hex color codes
+            color (color): Base-pair color
             thickness: Base-pair thickness
         """
         assert_valid_interval(self.length, i, j)
 
-        self.aux_BPs.append((i+1, j+1, _BPStyle(**{k: v for k, v in kwargs.items() if v is not None})))
+        self.aux_BPs.append((i+1, j+1, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness)))
 
     def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
         """Highlights a region by drawing a polygon of predefined radius,
@@ -101,8 +101,8 @@ class BasicDraw(VarnaConfig):
             i: 5'-end of the highlight
             j: 3'-end of the highlight
             radius: Thickness of the highlight
-            fill (Hex): The color used to fill the highlight
-            outline (Hex): The color used to draw the line around the highlight
+            fill (color): The color used to fill the highlight
+            outline (color): The color used to draw the line around the highlight
         """
         assert_valid_interval(self.length, i, j)
 
@@ -123,11 +123,12 @@ class BasicDraw(VarnaConfig):
             bases: List of 0-indexed positions
 
         Examples:
-            >>> style1 = BasesStyle(fill="#FF0000")
-            >>> style2 = BasesStyle(fill="#FFFF00" outline="#00FF00")
-            >>> varna.add_bases_style(style1, [0,2,4])
-            >>> varna.add_bases_style(setye1, [10,11,12])
-            >>> varna.add_bases_style(style2, [4,5,6,7])
+            >>> v = varnaapi.Structure()
+            >>> style1 = varnaapi.param.BasesStyle(fill="#FF0000")
+            >>> style2 = varnaapi.param.BasesStyle(fill="#FFFF00" outline="#00FF00")
+            >>> v.add_bases_style(style1, [0,2,4])
+            >>> v.add_bases_style(setye1, [10,11,12])
+            >>> v.add_bases_style(style2, [4,5,6,7])
 
         """
         if not isinstance(style, BasesStyle):
@@ -140,8 +141,9 @@ class BasicDraw(VarnaConfig):
         Argument should be a valid [Annotation](annotation.md) object
 
         Examples:
-            >>> a = LoopAnnotation("L1", 6, color="#FF00FF")
-            >>> varna.add_annotation(a)
+            >>> v = varnaapi.Structure()
+            >>> a = varnaapi.param.LoopAnnotation("L1", 6, color="#FF00FF")
+            >>> v.add_annotation(a)
         """
         # Assert is annotation
         if not isinstance(annotation, _Annotation):
@@ -229,9 +231,16 @@ class BasicDraw(VarnaConfig):
     def _gen_input_cmd(self):
         pass
 
-    def savefig(self, output, show=False):
+    def savefig(self, output, show:bool=False):
         """
         Call VARNA to draw and store the paint in output
+
+        Args:
+            output: Output file name with extension is either png or svg
+            show: Show the drawing
+
+        Note:
+            The argument `show` is used only in jupyter notebook
         """
         self.output = output
         cmd = self._gen_command()
@@ -243,6 +252,8 @@ class BasicDraw(VarnaConfig):
                 display(Image(filename=output))
             elif output[-3:] == 'svg':
                 display(SVG(filename=output))
+            else:
+                raise Exception("File type should be either png or svg")
 
     def show(self, extension='png'):
         """Show the drawing
@@ -257,7 +268,7 @@ class Structure(BasicDraw):
     and ` `s or `.`s will be added to sequence or structure to complement.
 
     Args:
-        seq: Raw nucleotide sequence for the displayed RNA.
+        sequence: Raw nucleotide sequence for the displayed RNA.
              Each base must be encoded in a single character.
              Letters others than `A`, `C`, `G`, `U` and space are tolerated.
         structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
@@ -337,7 +348,7 @@ def VARNA(*args, **kwargs):
 
 class Comparison(BasicDraw):
     """Drawing of two aligned RNAs.
-    Unlike classic [VARNA][varnaapi.VARNA] mode,
+    Unlike classic [Structure][varnaapi.Structure] mode,
     both sequences and structures __MUST__ be specified and have the same size.
     Additionally, the merged secondary structures must currently be without any crossing
     interactions (e.g. pseudoknots), and merging them should give a secondary structure.
@@ -375,7 +386,7 @@ class Motif(BasicDraw):
     represents a closing base pair. A motif can also be seen as an union
     of consecutive loops. The figure below represents `((*)(*)(((*)(*))))`.
 
-    Motif class inherits from [VARNA][varnaapi.VARNA] with some pre-set
+    Motif class inherits from [Structure][varnaapi.Structure] with some pre-set
     parameters.
 
     - rotation is set at `180`
@@ -388,7 +399,7 @@ class Motif(BasicDraw):
     Therefore, the index of bases is changed after creating the object.
     For example, the index of first base of root is `1` instead of `0`.
     The default bases style for root is
-    `BasesStyle(fill="#606060", outline="#FFFFFF",number="#FFFFFF")` and
+    `BasesStyle(fill="#606060", outline="#FFFFFF", number="#FFFFFF")` and
     `BasesStyle(fill="#DDDDDD", outline="#FFFFFF", number="#FFFFFF")` for
     dummy bases. One can change them using
     [set_root_bases_style][varnaapi.Motif.set_root_bases_style] and

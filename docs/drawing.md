@@ -1,11 +1,18 @@
-In VARNA API, we offer three Python classes [VARNA](#varnaapi.VARNA), [Comparison](#varnaapi.Comparison), and [Motif](#varnaapi.Motif) for RNA secondary structure visualisation.
+In VARNA API, all drawing classes are inherited from the class [BasicDraw][varnaapi.BasicDraw]. We offer three Python classes [Structure][varnaapi.Structure], [Comparison][varnaapi.Comparison], and [Motif][varnaapi.Motif] for different RNA secondary structure visualisation.
 The first two correspond to the classic and the comparison mode in VARNA. The last one is the special case for motif drawing.
-Both [Comparison](#varnaapi.Comparison) and [Motif](#varnaapi.Motif) are inherited classes of [VARNA](#varnaapi.VARNA).
+
+- [Structure][varnaapi.Structure]: The most common drawing class taking a secondary structure and/or an RNA sequence as input.
+- [Comparison][varnaapi.Comparison]: Comparison between two structures and two sequences.
+- [Motif][varnaapi.Motif]: Customized class to draw motif, an union of loops.
+
+::: varnaapi.models
+    selection:
+      members: ["BasicDraw"]
+      inherited_members: True
 
 ::: varnaapi.models
     selection:
       members: ["Structure"]
-      inherited_members: True
 
 ::: varnaapi.models
     selection:
@@ -23,7 +30,8 @@ Both [Comparison](#varnaapi.Comparison) and [Motif](#varnaapi.Motif) are inherit
 ### Example
 Figure above is created with
 ```python
-from varnaapi import Motif, BaseAnnotation
+from varnaapi import Motif
+from varnaapi.param import BaseAnnotation
 m = Motif("((*)(*)(((*)(*))))", sequence="  *AU* CC *  *    ")
 m.add_annotation(BaseAnnotation(" Root", 1))
 m.add_annotation(BaseAnnotation("Dummy", 13))

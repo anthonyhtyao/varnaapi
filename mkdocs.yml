@@ -12,7 +12,7 @@ nav:
   - Gallery:
     - Riboswitch cartoon: gallery/Cartoon-like.ipynb
   - API:
-    - VARNA Classes: varna.md
+    - Drawing Classes: drawing.md
     - Configurations: config.md
     - Annotation: annotation.md
     - Miscellaneous: varnaapi.md
