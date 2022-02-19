@@ -4,7 +4,7 @@ pages:
   only:
     - release-doc
   script:
-    - pip install mkdocs-material mkdocstrings mkdocs-jupyter mkdocstrings-python-legacy
+    - pip install mkdocs-material mkdocstrings mkdocs-jupyter mkdocstrings-python-legacy colour deprecated pyyml ipython
     - PYTHONPATH=src mkdocs build --site-dir public
   artifacts:
     paths:
