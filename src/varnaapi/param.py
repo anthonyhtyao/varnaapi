@@ -64,6 +64,7 @@ COLOR_DEFAULT = {
 
 BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
 """Boolean option list
+
     | Name              | Option                                                                                                                                        | Default |
     |-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|---------|
     | autoHelices       | Annotates each and every helix in the RNA with a unique `Hn` label                                                                            | False   |
@@ -102,9 +103,10 @@ BOOLEAN_DEFAULT = {
 NUMERIC_TYPE = {'border': tuple, 'bpIncrement': float, 'periodNum': int, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
 """Allowed numeric parameters
-    | Label             | Type  | Description                                                                                                                                                                                                    | Default|
-    |-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
-    | border | (int, int) | Sets the width and height of the panel border, <i>i.e.</i> the gap between the panel boundaries and those of the surface used to draw the RNA. Border setting is ignored if it's smaller than RNA draw. | N/A |
+
+    | Name              | Type  | Description                                                                                                                                                                                                    | Default|
+    |-------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
+    | border            | (int, int) | Sets the width and height of the panel border, <i>i.e.</i> the gap between the panel boundaries and those of the surface used to draw the RNA. Border setting is ignored if it's smaller than RNA draw. | N/A |
     | bpIncrement       | float | In linear drawing mode, defines the vertical increment used to separate two successive, nested base-pairs                                                                                                      | 0.65 |
     | periodNum         | int   | Sets the interval between two successive base numbers. More specifically, if `k` is the period, then the first and last bases  of the RNA are numbered, along with each base whose number is a multiple of `k` | 10 |
     | resolution        | float | Chooses the resolution of a bitmap PNG export, _i.e._ the multiplier in  the number of pixels in each dimension of the exported picture.                                                                           | 1 |
@@ -134,19 +136,26 @@ CHOICES_PARAMS = ['algorithm', 'bpStyle']
 CHOICES_TYPE = {k: 'choices' for k in CHOICES_PARAMS}
 
 BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
-"""Allowed options for base-pair style
-    | Label  | Description                                                                                            |
-    |--------|--------------------------------------------------------------------------------------------------------|
-    | none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures            |
-    | simple | A simple line is used to draw any base-pair, regardless of its type                                    |
-    | rnaviz | A small square is drawn at equal distance of the two partners                                          |
-    | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature |
+"""Allowed options for base-pair style (`bpStyle`), default value is `lw`
 
-    __See Also:__ [VARNA.set_bp_style][varnaapi.VARNA.set_bp_style]
+    | Label  | Description                                                                                                      |
+    |--------|------------------------------------------------------------------------------------------------------------------|
+    | none   | Base-pairs are not drawn, but can be implicitly seen from "ladders", _i.e_ helix structures                      |
+    | simple | A simple line is used to draw any base-pair, regardless of its type                                              |
+    | rnaviz | A small square is drawn at equal distance of the two partners                                                    |
+    | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature (Default) |
 
+
+    Example:
+        >>> BasicDraw.update(bpStyle="simple")
 """
 
 ALGORITHMS = ['line', 'circular', 'radiate', 'naview']
+"""Allowed options for drawing algorithms (`algorithm`) are `line`, `circular`, `radiate`, and `naview`. The default value is `radiate`.
+
+    Example:
+        >>> BasicDraw.update(algorithm="line")
+"""
 
 CHOICES_VALUE = {'algorithm': ALGORITHMS, 'bpStyle': BP_STYLES}
 CHOICES_DEFAULT = {'algorithm': 'radiate', 'bpStyle': 'lw'}
@@ -221,7 +230,7 @@ class _DefaultObj:
                     res[par] = val
         return res
 
-    def to_cmd(self):
+    def _to_cmd(self):
         res = []
         for par, val in self._get_diff().items():
             res += ['-'+par, str(val)]
@@ -252,36 +261,36 @@ class _Highlight(_DefaultObj):
         self.values['fill'] = Color(fill)
         self.values['outline'] = Color(outline)
 
-    def to_cmd(self):
+    def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
 
 class BasesStyle(_DefaultObj):
     """Defines a custom base-style, to be applied later to a set of bases.
     A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.BasesStyle.__init__] for more details.
+    BasesStyle is constructed from given colors for different components.
 
-    __See Also:__ [VARNA.add_bases_style][varnaapi.VARNA.add_bases_style]
-    """
-    def __init__(self, fill=None, outline=None, label=None, number=None):
-        """Basesstyle constructor from given colors for different components.
+    Error:
         At least one argument should be given.
 
-        Args:
-            fill (Hex): color of inner part of base
-            outline (Hex): color of outline of base
-            label (Hex): base text (name) color
-            number  (Hex): base number color
+    Args:
+        fill (color): color of inner part of base
+        outline (color): color of outline of base
+        label (color): base text (name) color
+        number (color): base number color
 
-        Examples:
-            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
-        """
+    Examples:
+        >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
+
+    __See Also:__ [BasicDraw.add_bases_style][varnaapi.BasicDraw.add_bases_style]
+    """
+    def __init__(self, fill=None, outline=None, label=None, number=None):
         super().__init__(fill=COLOR_DEFAULT['baseInner'], outline=COLOR_DEFAULT['baseOutline'], label=COLOR_DEFAULT['baseName'], number=COLOR_DEFAULT['baseNum'])
-        self.update(fill=fill, outline=outline, label=label, number=number)
+        self._update(fill=fill, outline=outline, label=label, number=number)
 
-    def update(self, **kwargs):
+    def _update(self, **kwargs):
         """Update component _colors.
-        Same rule as [\_\_init\_\_][varnaapi.BasesStyle.__init__]
+        Same rule as [\_\_init\_\_][varnaapi.param.BasesStyle.__init__]
         """
         # if fill is None and outline is None and label is None and number is None:
         #     raise Exception("At least one should not be None")
@@ -289,8 +298,8 @@ class BasesStyle(_DefaultObj):
             if val is not None:
                 self.values[par] = Color(val)
 
-    def to_cmd(self, **kwargs):
-        """Custom command generator for BasesStyle
+    def _to_cmd(self, **kwargs):
+        """Custom command generator for BasesStyle.
         Function takes the default bases color set by user in kwargs
         """
         for par, val in kwargs.items():
@@ -318,7 +327,7 @@ class _BPStyle(_DefaultObj):
         if 'thickness' in kwargs:
             self.values['thickness'] = float(kwargs['thickness'])
 
-    def to_cmd(self, color):
+    def _to_cmd(self, color):
         self.default['color'] = color
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
@@ -343,7 +352,7 @@ class _Annotation(_DefaultObj):
         self.values['size'] = int(size)
         self.anchor = anchor
 
-    def to_cmd(self):
+    def _to_cmd(self):
         res = ["{}={}".format(k, v) for k, v in self._get_diff().items()]
         if isinstance(self.anchor, int):
             res.append("anchor={}".format(self.anchor))
@@ -352,46 +361,47 @@ class _Annotation(_DefaultObj):
         return "{}:{}".format(self.text, ','.join(res))
 
 class BaseAnnotation(_Annotation):
-    def __init__(self, text:str, anchor:int, color="#000000", size=12):
-        """Annoation on a base.
+    """Annoation on a base.
 
-        Args:
-            text: Annotation caption
-            anchor: Index of base to annotate
-            color (Hex): Annotation color
-            size (int): Font size
-        """
+    Args:
+        text: Annotation caption
+        anchor: Index of base to annotate
+        color (color): Annotation color
+        size (int): Font size
+    """
+    def __init__(self, text:str, anchor:int, color="#000000", size=12):
         super().__init__(text, 'B', int(anchor), color, size)
 
 class LoopAnnotation(_Annotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on a loop.
+    """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on a loop.
     Argument `anchor` can be index of any base in the loop of interest.
     """
     def __init__(self, text, anchor, color="#000000", size=12):
         super().__init__(text, 'L', int(anchor), color, size)
 
 class HelixAnnotation(_Annotation):
-    """Same as [BaseAnnotation][varnaapi.BaseAnnotation] but on an helix.
+    """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on an helix.
     Argument `anchor` can be index of any base in the helix of interest.
     """
     def __init__(self, text, anchor, color="#000000", size=12):
         super().__init__(text, 'H', int(anchor), color, size)
 
 class StaticAnnotation(_Annotation):
+    """Annotation on a specified position in VARNA drawing.
+    Unlike [BaseAnnotation][varnaapi.param.BaseAnnotation], argument `anchor` is omitted.
+    However, arguments `x` and `y` are needed to specify annotation position.
+
+    Danger:
+        It is unrecommended to use static annotation unless you know what you're doing
+
+    Args:
+        x (int): x-coordinate of position
+        y (int): y-ccordinate of position
+
+    Examples:
+        >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
+    """
     def __init__(self, text, x, y, color="#000000", size=12):
-        """Annotation on a specified position in VARNA drawing.
-        Unlike [BaseAnnotation][varnaapi.BaseAnnotation], argument `anchor` is omitted.
-        However, arguments `x` and `y` are needed to specify annotation position.
-
-        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
-
-        Args:
-            x (int): x-coordinate of position
-            y (int): y-ccordinate of position
-
-        Examples:
-            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
-        """
         super().__init__(text, 'P', (int(x), int(y)),  color, size)
 
 CHEM_DEFAULT = {'glyph': 'arrow', 'dir': 'in', 'intensity': 1, 'color': Color('#0000B2')}
@@ -412,7 +422,7 @@ class _ChemProb(_DefaultObj):
         if 'intensity' in kwargs:
             self.values['intensity'] = float(kwargs['intensity'])
 
-    def to_cmd(self):
+    def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
 CM_DEFAULT = ["red", "blue", "green", "heat", "energy", "bw"]
@@ -437,7 +447,7 @@ class _ColorMap:
         else:
             raise ValueError('Style should be either a string of {} or a dictionary'.format(CM_DEFAULT))
 
-    def to_cmd(self):
+    def _to_cmd(self):
         cmd = []
         cmd += ['-colorMap', ';'.join(map(str, self.values))]
         if self.caption != "":
@@ -459,7 +469,7 @@ class _ColorMap:
 #################
 
 
-class VarnaConfig:
+class _VarnaConfig:
     """Create default configuration for VARNA
     """
     def __init__(self):
@@ -488,7 +498,8 @@ class VarnaConfig:
         return params
 
     def update(self, loaded=False, **kwargs):
-        """Easy way to update params value
+        """Easy way to update params value.
+        The list of keyward arguments can be found [here](/config)
         """
         # Assert argument is in the parameter list and type check
         if loaded:
@@ -507,13 +518,13 @@ class VarnaConfig:
                 except TypeError as e:
                     print(e)
 
-    def get_params(self, complete=True):
+    def get_params(self, complete:bool=False):
         """Get parameters with value in dictionary
         By default, only the parameters with value different than the default are returned.
         Set complete to True to get complete parameters.
 
         Args:
-            complete: Return complete parameters. Defaults to True
+            complete: Return complete parameters.
         """
         if complete:
             param = self._params.copy()
@@ -530,12 +541,13 @@ class VarnaConfig:
         self.update(algorithm=algo)
 
     def set_bp_style(self, style):
-        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.BP_STYLES]
+        """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.param.BP_STYLES]
 
         __Note:__ `lw` is set by default
 
         Example:
-            >>> varna.set_bp_style("simple")
+            >>> v = varnaapi.Structure()
+            >>> v.set_bp_style("simple")
         """
         self.update(bpStyle=style)
 
@@ -544,7 +556,7 @@ class VarnaConfig:
         """
 
         cmd = []
-        for par, val in self.get_params(complete=False).items():
+        for par, val in self.get_params().items():
             typ = PARAM_TYPE[par]
             if typ == 'color':
                 cmd.append('-' + par)

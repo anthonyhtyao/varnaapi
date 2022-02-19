@@ -9,10 +9,12 @@ theme:
 
 nav:
   - Home: index.md
+  - Gallery:
+    - Riboswitch cartoon: gallery/Cartoon-like.ipynb
   - API:
-    - VARNA Classes: varna.md
-    - Annotation: annotation.md
-    - Miscellaneous: varnaapi.md
+    - Drawing Classes: drawing.md
+    - Configurations: config.md
+    - Style Classes: style.md
 
 plugins:
   - search
@@ -26,10 +28,13 @@ plugins:
           rendering:
             show_root_toc_entry: False
       watch:
-        - varnaapi.py
+        - src/varnaapi
+  - mkdocs-jupyter
 
 
 markdown_extensions:
   - footnotes
   - pymdownx.highlight
+  - pymdownx.inlinehilite
   - pymdownx.superfences
+  - admonition
