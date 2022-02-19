@@ -2,10 +2,10 @@ image: python:latest
 pages:
   stage: deploy
   only:
-    - master
+    - release-doc
   script:
     - pip install mkdocs-material mkdocstrings
-    - mkdocs build --site-dir public
+    - PYTHONPATH=src mkdocs build --site-dir public
   artifacts:
     paths:
       - public
