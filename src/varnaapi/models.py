@@ -138,7 +138,7 @@ class BasicDraw(_VarnaConfig):
 
     def add_annotation(self, annotation:_Annotation):
         """Add an annotation.
-        Argument should be a valid [Annotation](annotation.md) object
+        Argument should be a valid [Annotation](/style#annotation) object
 
         Examples:
             >>> v = varnaapi.Structure()
@@ -150,14 +150,38 @@ class BasicDraw(_VarnaConfig):
             raise Exception("Should be a valid annotation object")
         self.annotations.append(annotation)
 
-    def add_chem_prob(self, i, **kwargs):
+    def add_chem_prob(self, base:int, glyph:str='arrow', dir:str='in', intensity:float=1, color='#0000B2'):
+        """Add chemical probing annotation on two adjacent bases.
+
+        Args:
+            base: index of the first base of adjacent bases
+            glyph: Shape of the annotation chosen from ['arrow', 'dot', 'pin', 'triangle']
+            dir: Direction of the annotation chosen from ['in', 'out']
+            intensity: Annotation intensity, _i.e._ thickness
+            color (color): Color used to draw the annotation
+        """
         try:
-            assert i>=0 and i < self.length-1
+            assert base>=0 and base < self.length-1
         except AssertionError:
             raise Exception("Base should be in between 0 and {}".format(self.length-1))
-        self.chem_prob.append((int(i), _ChemProb(**kwargs)))
+        self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color)))
 
-    def add_colormap(self, values, vMin=None, vMax=None, caption="", style="energy"):
+    def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy"):
+        """Add color map on bases.
+
+        Args:
+            values (float list): list of values in float for each base. `0`s are added at the end of the list if the list length is shorter than the number of bases.
+            vMin: Minium value for the color map
+            vMax: Maximum value for the color map
+            caption: Color map caption
+            style: Color map style, which is one of the following
+
+                - predefined style from
+
+                    ['red', 'blue', 'green', 'heat', 'energy', 'bw']
+
+                - customized style in a list of pairs, (value, color)
+        """
         self.colormap = _ColorMap(values, vMin, vMax, caption, style)
 
     def _gen_command(self):
@@ -174,14 +198,14 @@ class BasicDraw(_VarnaConfig):
 
         # Title cmd
         if self._title is not None:
-            cmd += self._title.to_cmd()
+            cmd += self._title._to_cmd()
 
         # Aux Base pairs
         if len(self.aux_BPs) > 0:
             res = []
             for i, j, style in self.aux_BPs:
                 s = "({},{})".format(i,j)
-                setting = style.to_cmd(self.get_params(complete=True)['bp'])
+                setting = style._to_cmd(self.get_params(complete=True)['bp'])
                 if not setting == "":
                     s += ":" + setting
                 res.append(s)
@@ -192,7 +216,7 @@ class BasicDraw(_VarnaConfig):
             res = []
             for item in self.highlight_regions:
                 s = "{}-{}".format(item[0], item[1])
-                setting = item[2].to_cmd()
+                setting = item[2]._to_cmd()
                 if not setting == "":
                     s += ":" + setting
                 res.append(s)
@@ -202,21 +226,21 @@ class BasicDraw(_VarnaConfig):
         styles = {'fill': 'baseInner', 'outline': 'baseOutline', 'label': 'baseName', 'number': 'baseNum'}
         styles_dafault = {v: self.get_params().get(v) for v in styles.values() if v in self.get_params()}
         for ind, (style, bases) in enumerate(self.bases_styles.items()):
-            s = style.to_cmd(**styles_dafault)
+            s = style._to_cmd(**styles_dafault)
             if not s == "":
                 cmd += ["-basesStyle{}".format(ind + 1), s]
                 cmd += ["-applyBasesStyle{}on".format(ind + 1), ','.join(map(str, bases))]
 
         # Annotations
         if len(self.annotations) > 0:
-            cmd += ["-annotations", ';'.join([t.to_cmd() for t in self.annotations])]
+            cmd += ["-annotations", ';'.join([t._to_cmd() for t in self.annotations])]
 
         # Chem Prob
         if len(self.chem_prob) > 0:
             res = []
             for i, style in self.chem_prob:
                 s = "{}-{}".format(i, i+1)
-                setting = style.to_cmd()
+                setting = style._to_cmd()
                 if not setting == "":
                     s += ":" + setting
                 res.append(s)
@@ -224,7 +248,7 @@ class BasicDraw(_VarnaConfig):
 
         # Color Map
         if self.colormap is not None:
-            cmd += self.colormap.to_cmd()
+            cmd += self.colormap._to_cmd()
 
         return cmd
 

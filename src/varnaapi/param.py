@@ -230,7 +230,7 @@ class _DefaultObj:
                     res[par] = val
         return res
 
-    def to_cmd(self):
+    def _to_cmd(self):
         res = []
         for par, val in self._get_diff().items():
             res += ['-'+par, str(val)]
@@ -261,34 +261,34 @@ class _Highlight(_DefaultObj):
         self.values['fill'] = Color(fill)
         self.values['outline'] = Color(outline)
 
-    def to_cmd(self):
+    def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
 
 class BasesStyle(_DefaultObj):
     """Defines a custom base-style, to be applied later to a set of bases.
     A BasesStyle style contains colors used for different components of a base.
-    See [\_\_init\_\_][varnaapi.param.BasesStyle.__init__] for more details.
+    BasesStyle is constructed from given colors for different components.
 
-    __See Also:__ [VARNA.add_bases_style][varnaapi.Structure.add_bases_style]
-    """
-    def __init__(self, fill=None, outline=None, label=None, number=None):
-        """Basesstyle constructor from given colors for different components.
+    Error:
         At least one argument should be given.
 
-        Args:
-            fill (Hex): color of inner part of base
-            outline (Hex): color of outline of base
-            label (Hex): base text (name) color
-            number  (Hex): base number color
+    Args:
+        fill (color): color of inner part of base
+        outline (color): color of outline of base
+        label (color): base text (name) color
+        number (color): base number color
 
-        Examples:
-            >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
-        """
+    Examples:
+        >>> style = BasesStyle(fill='#FF0000', outline='#00FF00')
+
+    __See Also:__ [BasicDraw.add_bases_style][varnaapi.BasicDraw.add_bases_style]
+    """
+    def __init__(self, fill=None, outline=None, label=None, number=None):
         super().__init__(fill=COLOR_DEFAULT['baseInner'], outline=COLOR_DEFAULT['baseOutline'], label=COLOR_DEFAULT['baseName'], number=COLOR_DEFAULT['baseNum'])
-        self.update(fill=fill, outline=outline, label=label, number=number)
+        self._update(fill=fill, outline=outline, label=label, number=number)
 
-    def update(self, **kwargs):
+    def _update(self, **kwargs):
         """Update component _colors.
         Same rule as [\_\_init\_\_][varnaapi.param.BasesStyle.__init__]
         """
@@ -298,8 +298,8 @@ class BasesStyle(_DefaultObj):
             if val is not None:
                 self.values[par] = Color(val)
 
-    def to_cmd(self, **kwargs):
-        """Custom command generator for BasesStyle
+    def _to_cmd(self, **kwargs):
+        """Custom command generator for BasesStyle.
         Function takes the default bases color set by user in kwargs
         """
         for par, val in kwargs.items():
@@ -327,7 +327,7 @@ class _BPStyle(_DefaultObj):
         if 'thickness' in kwargs:
             self.values['thickness'] = float(kwargs['thickness'])
 
-    def to_cmd(self, color):
+    def _to_cmd(self, color):
         self.default['color'] = color
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
@@ -352,7 +352,7 @@ class _Annotation(_DefaultObj):
         self.values['size'] = int(size)
         self.anchor = anchor
 
-    def to_cmd(self):
+    def _to_cmd(self):
         res = ["{}={}".format(k, v) for k, v in self._get_diff().items()]
         if isinstance(self.anchor, int):
             res.append("anchor={}".format(self.anchor))
@@ -361,15 +361,15 @@ class _Annotation(_DefaultObj):
         return "{}:{}".format(self.text, ','.join(res))
 
 class BaseAnnotation(_Annotation):
-    def __init__(self, text:str, anchor:int, color="#000000", size=12):
-        """Annoation on a base.
+    """Annoation on a base.
 
-        Args:
-            text: Annotation caption
-            anchor: Index of base to annotate
-            color (Hex): Annotation color
-            size (int): Font size
-        """
+    Args:
+        text: Annotation caption
+        anchor: Index of base to annotate
+        color (color): Annotation color
+        size (int): Font size
+    """
+    def __init__(self, text:str, anchor:int, color="#000000", size=12):
         super().__init__(text, 'B', int(anchor), color, size)
 
 class LoopAnnotation(_Annotation):
@@ -387,20 +387,21 @@ class HelixAnnotation(_Annotation):
         super().__init__(text, 'H', int(anchor), color, size)
 
 class StaticAnnotation(_Annotation):
+    """Annotation on a specified position in VARNA drawing.
+    Unlike [BaseAnnotation][varnaapi.param.BaseAnnotation], argument `anchor` is omitted.
+    However, arguments `x` and `y` are needed to specify annotation position.
+
+    Danger:
+        It is unrecommended to use static annotation unless you know what you're doing
+
+    Args:
+        x (int): x-coordinate of position
+        y (int): y-ccordinate of position
+
+    Examples:
+        >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
+    """
     def __init__(self, text, x, y, color="#000000", size=12):
-        """Annotation on a specified position in VARNA drawing.
-        Unlike [BaseAnnotation][varnaapi.param.BaseAnnotation], argument `anchor` is omitted.
-        However, arguments `x` and `y` are needed to specify annotation position.
-
-        __Note:__ It is unrecommended to use static annotation unless you know what you're doing
-
-        Args:
-            x (int): x-coordinate of position
-            y (int): y-ccordinate of position
-
-        Examples:
-            >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
-        """
         super().__init__(text, 'P', (int(x), int(y)),  color, size)
 
 CHEM_DEFAULT = {'glyph': 'arrow', 'dir': 'in', 'intensity': 1, 'color': Color('#0000B2')}
@@ -421,7 +422,7 @@ class _ChemProb(_DefaultObj):
         if 'intensity' in kwargs:
             self.values['intensity'] = float(kwargs['intensity'])
 
-    def to_cmd(self):
+    def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
 
 CM_DEFAULT = ["red", "blue", "green", "heat", "energy", "bw"]
@@ -446,7 +447,7 @@ class _ColorMap:
         else:
             raise ValueError('Style should be either a string of {} or a dictionary'.format(CM_DEFAULT))
 
-    def to_cmd(self):
+    def _to_cmd(self):
         cmd = []
         cmd += ['-colorMap', ';'.join(map(str, self.values))]
         if self.caption != "":

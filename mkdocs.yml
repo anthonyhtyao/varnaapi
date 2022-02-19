@@ -14,8 +14,7 @@ nav:
   - API:
     - Drawing Classes: drawing.md
     - Configurations: config.md
-    - Annotation: annotation.md
-    - Miscellaneous: varnaapi.md
+    - Style Classes: style.md
 
 plugins:
   - search
