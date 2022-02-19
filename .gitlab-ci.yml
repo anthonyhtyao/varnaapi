@@ -4,7 +4,7 @@ pages:
   only:
     - release-doc
   script:
-    - pip install mkdocs-material mkdocstrings
+    - pip install mkdocs-material mkdocstrings mkdocs-jupyter mkdocstrings-python-legacy
     - PYTHONPATH=src mkdocs build --site-dir public
   artifacts:
     paths:
