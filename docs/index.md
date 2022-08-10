@@ -26,7 +26,7 @@ python3 -m pip install varnaapi
 ```
 
 ## Usage
-Here, we show the basic usage of varnaapi. Please refer the [API](https://htyao.gitlab.io/varna-api/varna) page for more details.
+Here, we show the basic usage of varnaapi.
 The first thing after importing `varnaapi` is to setup the location of VARNA to use.
 
 !!! note "By default, the library assumes the VARNA v3-93 in the current folder is used (`./VARNAv3-93.jar`)"
