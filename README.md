@@ -70,7 +70,7 @@ Some parameters, such as algorithm, can be set up via specific function. The res
 v.update(algorithm='naview', bpStyle='none', drawBackbone=False, bp='#006400')
 ```
 
-!!! note "Color parameters"
+Note:
     Value for all color parameters in VARNA API should be readable by the object [colour.Color](https://github.com/vaab/colour), such as human color name, hex, RGB etc.
 
 #### Save configuration
@@ -92,7 +92,7 @@ The second way is loading the configuration as a global setting in the opened se
 varnaapi.load_config('config.yml')
 ```
 
-!!! note "Parameter value priority order"
+Note:
     VARNA API uses parameter values in the following order, _i.e._ if the value in the current order is undefined, then the next one is used
 
     - Value set by `varnaapi.BasicDraw.update()` or similar functions 
@@ -109,7 +109,7 @@ v.add_highlight_region(0, 5, radius=20)
 v.add_aux_bp(0, 9, color='red')
 ```
 
-!!! note "The VARNA API is 0-indexed unlike VARNA, which is 1-indexed."
+Note: The VARNA API is 0-indexed unlike VARNA, which is 1-indexed.
 
 ## Credits
 Please kindly cite VARNA [supporting manuscript](https://doi.org/10.1093/bioinformatics/btp250) if you use VARNA API in your research.
