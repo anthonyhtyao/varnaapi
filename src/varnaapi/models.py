@@ -33,7 +33,7 @@ def set_VARNA(path):
 
 def assert_valid_interval(length, *args):
     for i in args:
-        if i < 1 or i >= length:
+        if i < 1 or i > length:
             raise Exception("{} out of range".format(args))
 
 def check_structure(ss):
