@@ -33,8 +33,8 @@ Figure above is created with
 from varnaapi import Motif
 from varnaapi.param import BaseAnnotation
 m = Motif("((*)(*)(((*)(*))))", sequence="  *AU* CC *  *    ")
-m.add_annotation(BaseAnnotation(" Root", 1))
-m.add_annotation(BaseAnnotation("Dummy", 13))
+m.add_annotation(BaseAnnotation(" Root", 2))
+m.add_annotation(BaseAnnotation("Dummy", 14))
 # Show how base indices work for motif.
 # Remeber that VARNA is 1-indexed
 m.set_default_color(baseNum="#a6a6a6")

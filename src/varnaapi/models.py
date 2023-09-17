@@ -126,7 +126,7 @@ class BasicDraw(_VarnaConfig):
             >>> v = varnaapi.Structure()
             >>> style1 = varnaapi.param.BasesStyle(fill="#FF0000")
             >>> style2 = varnaapi.param.BasesStyle(fill="#FFFF00" outline="#00FF00")
-            >>> v.add_bases_style(style1, [0,2,4])
+            >>> v.add_bases_style(style1, [1,2,4])
             >>> v.add_bases_style(setye1, [10,11,12])
             >>> v.add_bases_style(style2, [4,5,6,7])
 
