@@ -75,6 +75,7 @@ class BasicDraw(_VarnaConfig):
         self.chem_prob = []
         self.length = 0
         self.colormap = None
+        self.to_flip = []
 
     def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
@@ -181,6 +182,36 @@ class BasicDraw(_VarnaConfig):
         """
         self.colormap = _ColorMap(values, vMin, vMax, caption, style)
 
+    def flip(self, *positions):
+        """Flip one or more helices identfied by given positions.
+
+        Note: Behind the flip
+            For a given base or basepair, VARNA flips the helix the base or the basepair belongs to by identifying first the farest position at 5' and then redrawing the helix in the counter direction from that position.
+            By default, VARNA positions bases in clockwise direction, therefore repositioning bases in counter clockwise direction gives the effect of flip.
+            Such flipping rule gives the following three results:
+            ```md
+                1. Consider two helices separated by a loop. Giving the position of the first helix flips both helices as one. However, giving the position of the second helix will result the flipping of only the second one, which may cause two helices overlap in the drawing.
+                2. Giving even number of positions of the same helix cancels out the flip.
+                3. In linear drawing mode, flipping will not draw basepair arcs in lower plane as if affects bases positioning.
+            ```
+
+        Args:
+            positions: either a base in integer or a basepair in integer tuple of the helix to flip
+
+        Example:
+            Consider secondary structure
+            ```
+                    ...(((...)))...((...))...(((...)))...
+                    1234567890123456789012345678901234567
+            ```
+            One can flip the first and third branches by
+            >>> v = varnaapi.Structure(structure=dbn)
+            >>> v.flip(5, (27,33))
+
+        """
+        map(lambda x: assert_valid_interval(self.length, *(x if isinstance(x, tuple) else (x,))), positions)
+        self.to_flip += positions
+
     def _gen_command(self):
         """
         Return command to run VARNA
@@ -247,6 +278,9 @@ class BasicDraw(_VarnaConfig):
         if self.colormap is not None:
             cmd += self.colormap._to_cmd()
 
+        # flip
+        if len(self.to_flip) > 0:
+            cmd += ["-flip", ';'.join('-'.join(str(t) for t in (x if isinstance(x, tuple) else (x,))) for x in self.to_flip)]
         return cmd
 
     def _gen_input_cmd(self):
