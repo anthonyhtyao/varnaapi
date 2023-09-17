@@ -33,7 +33,7 @@ def set_VARNA(path):
 
 def assert_valid_interval(length, *args):
     for i in args:
-        if i < 0 or i >= length:
+        if i < 1 or i >= length:
             raise Exception("{} out of range".format(args))
 
 def check_structure(ss):
@@ -90,7 +90,7 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.aux_BPs.append((i+1, j+1, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness)))
+        self.aux_BPs.append((i, j, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness)))
 
     def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
         """Highlights a region by drawing a polygon of predefined radius,
@@ -106,7 +106,7 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.highlight_regions.append((i+1, j+1, _Highlight(radius, fill, outline)))
+        self.highlight_regions.append((i, j, _Highlight(radius, fill, outline)))
 
     def set_title(self, title:str, color='#000000', size:int=19):
         """Set title displayed at the bottom of the panel with color and font size
@@ -134,7 +134,7 @@ class BasicDraw(_VarnaConfig):
         if not isinstance(style, BasesStyle):
             raise Exception("style should be BasesStyle object")
         if len(bases) > 0:
-            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
+            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i for i in bases})
 
     def add_annotation(self, annotation:_Annotation):
         """Add an annotation.
@@ -160,10 +160,7 @@ class BasicDraw(_VarnaConfig):
             intensity: Annotation intensity, _i.e._ thickness
             color (color): Color used to draw the annotation
         """
-        try:
-            assert base>=0 and base < self.length-1
-        except AssertionError:
-            raise Exception("Base should be in between 0 and {}".format(self.length-1))
+        assert_valid_interval(self.length, base)
         self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color)))
 
     def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy"):
@@ -443,7 +440,7 @@ class Motif(BasicDraw):
         seq = ""
         struct = ""
         extra_bps = []
-        pos = 0
+        pos = 1
         for i, c in enumerate(motif):
             if c == "*":
                 if sequence is not None and not sequence[i] == '*':
@@ -466,8 +463,8 @@ class Motif(BasicDraw):
         struct = "(" + struct + ")"
         self.sequence = seq
         self.structure = struct
-        self.length = pos + 2
-        extra_bps.append((0, self.length - 1))
+        self.length = pos + 1
+        extra_bps.append((1, self.length))
         self.extra_bps = extra_bps
 
         # Default Bases Styles
@@ -498,8 +495,8 @@ class Motif(BasicDraw):
         for (i,j) in self.extra_bps:
             dummybps += [i, j]
             self.add_aux_BP(i=i, j=j, color="#DDDDDD")
-        self.add_aux_BP(i=1, j=self.length-2, color="#000000", thickness=2)
+        self.add_aux_BP(i=2, j=self.length-1, color="#000000", thickness=2)
 
-        self.add_bases_style(self.rootBasesStyle, [1, self.length-2])
+        self.add_bases_style(self.rootBasesStyle, [2, self.length-1])
         self.add_bases_style(self.dummyBasesStyle, dummybps)
         super().savefig(output)
