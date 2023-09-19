@@ -6,3 +6,6 @@ site
 build
 dist
 varnaapi.egg-info
+*.jar
+.ipynb_checkpoints
+*.yml
