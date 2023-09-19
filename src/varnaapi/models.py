@@ -9,7 +9,7 @@ from deprecated import deprecated
 
 from IPython.display import Image, display, SVG
 
-from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
+from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap, ENABLE_HACK
 
 
 _VARNA_PATH="VARNAv3-93.jar"
@@ -32,9 +32,10 @@ def set_VARNA(path):
     _VARNA_PATH = path
 
 def assert_valid_interval(length, *args):
-    for i in args:
-        if i < 1 or i > length:
-            raise Exception("{} out of range".format(args))
+    if not ENABLE_HACK:
+        for i in args:
+            if i < 1 or i > length:
+                raise Exception("{} out of range".format(args))
 
 def check_structure(ss):
     pass
@@ -102,7 +103,7 @@ class BasicDraw(_VarnaConfig):
         self.to_flip = []
         self.smart_flip = False
 
-    def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1):
+    def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -116,9 +117,9 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.aux_BPs.append((i, j, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness)))
+        self.aux_BPs.append((i, j, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness, **kwargs)))
 
-    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
+    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E", **kwargs):
         """Highlights a region by drawing a polygon of predefined radius,
         fill color and outline color around it.
         A region consists in an interval from base `i` to base `j`.
@@ -132,12 +133,12 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.highlight_regions.append((i, j, _Highlight(radius, fill, outline)))
+        self.highlight_regions.append((i, j, _Highlight(radius, fill, outline, **kwargs)))
 
-    def set_title(self, title:str, color='#000000', size:int=19):
+    def set_title(self, title:str, color='#000000', size:int=19, **kwargs):
         """Set title displayed at the bottom of the panel with color and font size
         """
-        self._title = _Title(title, color, size)
+        self._title = _Title(title, color, size, **kwargs)
 
     def add_bases_style(self, style:BasesStyle, bases:list):
         """Apply a [BasesStyle][varnaapi.param.BasesStyle] to a list of positions.
@@ -176,7 +177,7 @@ class BasicDraw(_VarnaConfig):
             raise Exception("Should be a valid annotation object")
         self.annotations.append(annotation)
 
-    def add_chem_prob(self, base:int, glyph:str='arrow', dir:str='in', intensity:float=1, color='#0000B2'):
+    def add_chem_prob(self, base:int, glyph:str='arrow', dir:str='in', intensity:float=1, color='#0000B2', **kwargs):
         """Add chemical probing annotation on two adjacent bases.
 
         Args:
@@ -187,9 +188,9 @@ class BasicDraw(_VarnaConfig):
             color (color): Color used to draw the annotation
         """
         assert_valid_interval(self.length, base)
-        self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color)))
+        self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color, **kwargs)))
 
-    def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy"):
+    def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy", **kwargs):
         """Add color map on bases.
 
         Args:
@@ -205,7 +206,7 @@ class BasicDraw(_VarnaConfig):
 
                 - customized style in a list of pairs, (value, color)
         """
-        self.colormap = _ColorMap(values, vMin, vMax, caption, style)
+        self.colormap = _ColorMap(values, vMin, vMax, caption, style, **kwargs)
 
     def flip(self, *positions):
         """Flip one or more helices identfied by given positions.
