@@ -323,7 +323,7 @@ class BasicDraw(_VarnaConfig):
         return self.structure
 
     def _gen_input_cmd(self):
-        pass
+        return []
 
     def savefig(self, output, show:bool=False):
         """
@@ -365,14 +365,9 @@ class Structure(BasicDraw):
         sequence: Raw nucleotide sequence for the displayed RNA.
              Each base must be encoded in a single character.
              Letters others than `A`, `C`, `G`, `U` and space are tolerated.
-        structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
-
-            - Dot-Bracket Notation (DBN)
-            - List of pair of int representing a list of base-pairs
-            - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
-
+        structure (str or list): RNA (pseudoknotted) secondary structure in dbn
     """
-    def __init__(self, sequence=None, structure=None):
+    def __init__(self, structure=None, sequence=None):
         super().__init__()
 
         self.length = -1
@@ -380,53 +375,51 @@ class Structure(BasicDraw):
         self.sequence = ""
 
         if structure is not None:
-            if isinstance(structure, list):
-                if len(structure) > 0:
-                    first = structure[0]
-                    if len(first)==1:
-                        self.structure = check_structure(structure)
-                    elif len(first)==2:
-                        self.structure = _bp_to_struct(structure)
-                    else:
-                        raise Exception("Unrecognized structure format for %s"%(structure))
+            self.structure = structure
+            # if isinstance(structure, list):
+            #     if len(structure) > 0:
+            #         first = structure[0]
+            #         if len(first)==1:
+            #             self.structure = check_structure(structure)
+            #         elif len(first)==2:
+            #             self.structure = _bp_to_struct(structure)
+            #         else:
+            #             raise Exception("Unrecognized structure format for %s"%(structure))
             # Dot-Bracket Notation
-            elif isinstance(structure, str):
-                self.structure = _parse_vienna(structure)
-                self.dbn = structure
             self.length = len(self.structure)
         if sequence is not None:
             self.length = max(self.length,len(sequence))
             self.sequence = sequence
         # Now we know the length, let's extend the sequence and structure if necessary
-        self.sequence += " "*(self.length-len(self.sequence))
-        self.structure += [-1]*(self.length-len(self.structure))
+        # self.sequence += " "*(self.length-len(self.sequence))
+        # self.structure += [-1]*(self.length-len(self.structure))
 
-    def format_structure(self):
-        """Return secondary structure in dot-brackaet notation
-        """
-        def greedy_fill(c1, c2, res, ss, i, j):
-            if i <= j:
-                k = ss[i]
-                if k == -1:
-                    greedy_fill(c1, c2, res, ss, i+1, j)
-                elif k > i:
-                    if k <= j:
-                        res[i], res[k] = c1, c2
-                        ss[i], ss[k] = -1, -1
-                        greedy_fill(c1, c2, res, ss, i+1, k-1)
-                        greedy_fill(c1, c2, res, ss, k+1, j)
+    # def format_structure(self):
+    #     """Return secondary structure in dot-brackaet notation
+    #     """
+    #     def greedy_fill(c1, c2, res, ss, i, j):
+    #         if i <= j:
+    #             k = ss[i]
+    #             if k == -1:
+    #                 greedy_fill(c1, c2, res, ss, i+1, j)
+    #             elif k > i:
+    #                 if k <= j:
+    #                     res[i], res[k] = c1, c2
+    #                     ss[i], ss[k] = -1, -1
+    #                     greedy_fill(c1, c2, res, ss, i+1, k-1)
+    #                     greedy_fill(c1, c2, res, ss, k+1, j)
 
-        res = ["." for _ in range(self.length)]
-        ss = self.structure[:]
-        for c1, c2 in PARENTHESES_SYSTEMS:
-            greedy_fill(c1, c2, res, ss, i=0, j=self.length-1)
-            finished = True
-            for i in ss:
-                if i != -1:
-                    finished = False
-            if finished:
-                break
-        return "".join(res)
+    #     res = ["." for _ in range(self.length)]
+    #     ss = self.structure[:]
+    #     for c1, c2 in PARENTHESES_SYSTEMS:
+    #         greedy_fill(c1, c2, res, ss, i=0, j=self.length-1)
+    #         finished = True
+    #         for i in ss:
+    #             if i != -1:
+    #                 finished = False
+    #         if finished:
+    #             break
+    #     return "".join(res)
 
     def _gen_input_cmd(self):
         return ['-sequenceDBN', self.sequence, '-structureDBN', self.format_structure()]

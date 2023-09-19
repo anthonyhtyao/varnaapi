@@ -16,7 +16,6 @@ CONFIG = {}
 def check_settings_exists():
     if not CONFIG_USER.exists():
         copyfile(CONFIG_ORIGIN, CONFIG_USER)
-        print(CONFIG_USER)
 
 
 def load_settings():
