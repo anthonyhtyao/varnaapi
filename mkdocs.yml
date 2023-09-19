@@ -11,6 +11,7 @@ nav:
   - Home: index.md
   - Gallery:
     - Riboswitch cartoon: gallery/Cartoon-like.ipynb
+    - 2.5D module drawing with hack mode: gallery/Module-drawing-with-hacked-option.ipynb
   - API:
     - Drawing Classes: drawing.md
     - Configurations: config.md
