@@ -6,20 +6,20 @@ The first two correspond to the classic and the comparison mode in VARNA. The la
 - [Motif][varnaapi.Motif]: Customized class to draw motif, an union of loops.
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["BasicDraw"]
       inherited_members: True
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["Structure"]
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["Comparison"]
 
 ::: varnaapi.models
-    selection:
+    options:
       filters: ["!savefig"]
       members: ["Motif"]
 

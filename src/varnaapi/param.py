@@ -27,6 +27,7 @@ yaml.add_constructor('!color', color_constructor)
 
 COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
               'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
+COLOR_LIST: list
 """Allowed options for basic color setting
 
     | Name         | Object in panel                                         | Default Color |
@@ -63,6 +64,7 @@ COLOR_DEFAULT = {
 #################
 
 BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+BOOLEAN_OPTIONS: list
 """Boolean option list
 
     | Name              | Option                                                                                                                                        | Default |
@@ -102,6 +104,7 @@ BOOLEAN_DEFAULT = {
 
 NUMERIC_TYPE = {'border': tuple, 'bpIncrement': float, 'periodNum': int, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
+NUMERIC_PARAMS: list
 """Allowed numeric parameters
 
     | Name              | Type  | Description                                                                                                                                                                                                    | Default|
@@ -146,14 +149,14 @@ BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
     | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature (Default) |
 
 
-    Example:
+    Examples:
         >>> BasicDraw.update(bpStyle="simple")
 """
 
 ALGORITHMS = ['line', 'circular', 'radiate', 'naview']
 """Allowed options for drawing algorithms (`algorithm`) are `line`, `circular`, `radiate`, and `naview`. The default value is `radiate`.
 
-    Example:
+    Examples:
         >>> BasicDraw.update(algorithm="line")
 """
 
@@ -543,9 +546,9 @@ class _VarnaConfig:
     def set_bp_style(self, style):
         """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.param.BP_STYLES]
 
-        __Note:__ `lw` is set by default
+        Note: `lw` is set by default
 
-        Example:
+        Examples:
             >>> v = varnaapi.Structure()
             >>> v.set_bp_style("simple")
         """

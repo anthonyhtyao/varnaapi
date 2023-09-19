@@ -223,7 +223,7 @@ class BasicDraw(_VarnaConfig):
         Args:
             positions: either a base in integer or a basepair in integer tuple of the helix to flip
 
-        Example:
+        Examples:
             Consider secondary structure
             ```
                     ...(((...)))...((...))...(((...)))...

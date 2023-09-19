@@ -9,14 +9,19 @@ The object stores the text and other informtation needed.
 One can add `Annotation` to drawing using [BasicDraw.add_annotation][varnaapi.BasicDraw.add_annotation].
 Four annotation types allowed in VARNA are represented by four objects below.
 
-
 ::: varnaapi.param
-    selection:
-		  members: ["BaseAnnotation", "LoopAnnotation", "HelixAnnotation", "StaticAnnotation"]
-    rendering:
+    options:
       heading_level: 3
+      members:
+        - BaseAnnotation
+        - HelixAnnotation
+        - LoopAnnotation
+        - StaticAnnotation
+
+
 
 ::: varnaapi.param
-    selection:
-		  members: ["BasesStyle"]
+    options:
+        members: ["BasesStyle"]
+
 
