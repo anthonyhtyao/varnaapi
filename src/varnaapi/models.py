@@ -10,9 +10,7 @@ from deprecated import deprecated
 from IPython.display import Image, display, SVG
 
 from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
-
-
-_VARNA_PATH="VARNAv3-93.jar"
+import varnaapi.settings
 
 
 PARENTHESES_SYSTEMS = [
@@ -25,16 +23,12 @@ PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
 
-def set_VARNA(path):
-    """Set VARNA location
-    """
-    global _VARNA_PATH
-    _VARNA_PATH = path
 
 def assert_valid_interval(length, *args):
-    for i in args:
-        if i < 0 or i >= length:
-            raise Exception("{} out of range".format(args))
+    if not varnaapi.settings.CONFIG['hackmode']:
+        for i in args:
+            if i < 1 or i > length:
+                raise Exception("{} out of range".format(args))
 
 def check_structure(ss):
     pass
@@ -63,10 +57,34 @@ def _parse_vienna(ss):
     return res
 
 
+def _match_ext(dbn, positions):
+    """Return minimal bases in exterior loop identified by given positions
+    """
+    res = [0] * (len(dbn)+1)
+    count = 0
+    current = 0
+    for ind, c in enumerate(dbn):
+        if c == '(':
+            if count == 0:
+                current = ind+1
+            count += 1
+            res[ind+1] = current
+        elif c == ')':
+            count -= 1
+            res[ind+1] = current
+            if count == 0:
+                current = 0
+        else:
+            res[ind+1] = current
+    return list(set(res[t] for x in positions for t in (x if isinstance(x, tuple) else (x,)) if res[t]!=0))
+
+
+
 class BasicDraw(_VarnaConfig):
     def __init__(self):
         super().__init__()
 
+        self.structure = ""
         self.aux_BPs = []
         self.highlight_regions = []
         self._title = None
@@ -75,8 +93,10 @@ class BasicDraw(_VarnaConfig):
         self.chem_prob = []
         self.length = 0
         self.colormap = None
+        self.to_flip = []
+        self.smart_flip = False
 
-    def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1):
+    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='blue', thickness:float=1, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -90,9 +110,9 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.aux_BPs.append((i+1, j+1, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness)))
+        self.aux_BPs.append((i, j, _BPStyle(edge5=edge5, edge3=edge3, stericity=stericity, color=color, thickness=thickness, **kwargs)))
 
-    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E"):
+    def add_highlight_region(self, i:int, j:int, radius:float=16, fill="#BCFFDD", outline="#6ED86E", **kwargs):
         """Highlights a region by drawing a polygon of predefined radius,
         fill color and outline color around it.
         A region consists in an interval from base `i` to base `j`.
@@ -106,12 +126,12 @@ class BasicDraw(_VarnaConfig):
         """
         assert_valid_interval(self.length, i, j)
 
-        self.highlight_regions.append((i+1, j+1, _Highlight(radius, fill, outline)))
+        self.highlight_regions.append((i, j, _Highlight(radius, fill, outline, **kwargs)))
 
-    def set_title(self, title:str, color='#000000', size:int=19):
+    def set_title(self, title:str, color='#000000', size:int=19, **kwargs):
         """Set title displayed at the bottom of the panel with color and font size
         """
-        self._title = _Title(title, color, size)
+        self._title = _Title(title, color, size, **kwargs)
 
     def add_bases_style(self, style:BasesStyle, bases:list):
         """Apply a [BasesStyle][varnaapi.param.BasesStyle] to a list of positions.
@@ -126,7 +146,7 @@ class BasicDraw(_VarnaConfig):
             >>> v = varnaapi.Structure()
             >>> style1 = varnaapi.param.BasesStyle(fill="#FF0000")
             >>> style2 = varnaapi.param.BasesStyle(fill="#FFFF00" outline="#00FF00")
-            >>> v.add_bases_style(style1, [0,2,4])
+            >>> v.add_bases_style(style1, [1,2,4])
             >>> v.add_bases_style(setye1, [10,11,12])
             >>> v.add_bases_style(style2, [4,5,6,7])
 
@@ -134,7 +154,7 @@ class BasicDraw(_VarnaConfig):
         if not isinstance(style, BasesStyle):
             raise Exception("style should be BasesStyle object")
         if len(bases) > 0:
-            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i+1 for i in bases})
+            self.bases_styles[style] = self.bases_styles.get(style, set()).union({i for i in bases})
 
     def add_annotation(self, annotation:_Annotation):
         """Add an annotation.
@@ -150,7 +170,7 @@ class BasicDraw(_VarnaConfig):
             raise Exception("Should be a valid annotation object")
         self.annotations.append(annotation)
 
-    def add_chem_prob(self, base:int, glyph:str='arrow', dir:str='in', intensity:float=1, color='#0000B2'):
+    def add_chem_prob(self, base:int, glyph:str='arrow', dir:str='in', intensity:float=1, color='#0000B2', **kwargs):
         """Add chemical probing annotation on two adjacent bases.
 
         Args:
@@ -160,13 +180,10 @@ class BasicDraw(_VarnaConfig):
             intensity: Annotation intensity, _i.e._ thickness
             color (color): Color used to draw the annotation
         """
-        try:
-            assert base>=0 and base < self.length-1
-        except AssertionError:
-            raise Exception("Base should be in between 0 and {}".format(self.length-1))
-        self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color)))
+        assert_valid_interval(self.length, base)
+        self.chem_prob.append((int(base), _ChemProb(glyph=glyph, dir=dir, intensity=intensity, color=color, **kwargs)))
 
-    def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy"):
+    def add_colormap(self, values, vMin:float=None, vMax:float=None, caption:str="", style="energy", **kwargs):
         """Add color map on bases.
 
         Args:
@@ -182,13 +199,56 @@ class BasicDraw(_VarnaConfig):
 
                 - customized style in a list of pairs, (value, color)
         """
-        self.colormap = _ColorMap(values, vMin, vMax, caption, style)
+        self.colormap = _ColorMap(values, vMin, vMax, caption, style, **kwargs)
+
+    def flip(self, *positions):
+        """Flip one or more helices identfied by given positions.
+
+        Note: Behind the flip
+            For a given base or basepair, VARNA flips the helix the base or the basepair belongs to by identifying first the farest position at 5' and then redrawing the helix in the counter direction from that position.
+            By default, VARNA positions bases in clockwise direction, therefore repositioning bases in counter clockwise direction gives the effect of flip.
+            Such flipping rule gives the following results:
+
+                1. No flip will happen if given position is unpaired.
+                2. Giving even number of positions of the same helix cancels out the flip.
+                3. Consider two helices separated by a loop. Giving the position of the first helix flips both helices as one. However, giving the position of the second helix will result the flipping of only the second one, which may cause two helices overlap in the drawing.
+                4. In linear drawing mode, flipping will not draw basepair arcs in lower plane as if affects bases positioning.
+
+        Args:
+            positions: either a base in integer or a basepair in integer tuple of the helix to flip
+
+        Examples:
+            Consider secondary structure
+            ```
+                    ...(((...)))...((...))...(((...)))...
+                    1234567890123456789012345678901234567
+            ```
+            One can flip the first and third branches by
+            >>> v = varnaapi.Structure(structure=dbn)
+            >>> v.flip(5, (27,33))
+
+        __See Also:__ [BasicDraw.enable_smart_flip][varnaapi.BasicDraw.enable_smart_flip]
+        """
+        map(lambda x: assert_valid_interval(self.length, *(x if isinstance(x, tuple) else (x,))), positions)
+        self.to_flip += positions
+
+
+    def enable_smart_flip(self, enable:bool=True):
+        """Enable to flip positions treating to address points 1-3 in flip().
+        When enable, for each branch of exterior loop, VARNA API will send only the 5' most position to flip to VARNA if any position (unpaired included) of the branch is given by flip().
+
+        Args:
+            enable (bool): Enable or disable smart flip.
+
+        __See Also:__ [BasicDraw.flip][varnaapi.BasicDraw.flip]
+        """
+        self.smart_flip = enable
 
     def _gen_command(self):
         """
         Return command to run VARNA
         """
-        cmd = ['java', '-cp', _VARNA_PATH, 'fr.orsay.lri.varna.applications.VARNAcmd']
+        cmd = ['java', '-cp', varnaapi.settings.CONFIG['varnapath'], 'fr.orsay.lri.varna.applications.VARNAcmd']
 
         cmd += self._gen_input_cmd()
 
@@ -250,14 +310,23 @@ class BasicDraw(_VarnaConfig):
         if self.colormap is not None:
             cmd += self.colormap._to_cmd()
 
+        # flip
+        if self.smart_flip:
+            to_flip = _match_ext(self.format_structure(), self.to_flip)
+        else:
+            to_flip = self.to_flip
+        if len(to_flip) > 0:
+            cmd += ["-flip", ';'.join('-'.join(str(t) for t in (x if isinstance(x, tuple) else (x,))) for x in to_flip)]
         return cmd
 
+    def format_structure(self):
+        return self.structure
+
     def _gen_input_cmd(self):
-        pass
+        return []
 
     def savefig(self, output, show:bool=False):
-        """
-        Call VARNA to draw and store the paint in output
+        """Call VARNA to draw and store the paint in output
 
         Args:
             output: Output file name with extension is either png or svg
@@ -295,14 +364,9 @@ class Structure(BasicDraw):
         sequence: Raw nucleotide sequence for the displayed RNA.
              Each base must be encoded in a single character.
              Letters others than `A`, `C`, `G`, `U` and space are tolerated.
-        structure (str or list): RNA (pseudoknotted) secondary structure in one of three formats
-
-            - Dot-Bracket Notation (DBN)
-            - List of pair of int representing a list of base-pairs
-            - List of int, in which i-th value is `j` if `(i,j)` is a base pair or `-1` if i-th base is unpaired
-
+        structure (str or list): RNA (pseudoknotted) secondary structure in dbn
     """
-    def __init__(self, sequence=None, structure=None):
+    def __init__(self, structure=None, sequence=None):
         super().__init__()
 
         self.length = -1
@@ -310,53 +374,51 @@ class Structure(BasicDraw):
         self.sequence = ""
 
         if structure is not None:
-            if isinstance(structure, list):
-                if len(structure) > 0:
-                    first = structure[0]
-                    if len(first)==1:
-                        self.structure = check_structure(structure)
-                    elif len(first)==2:
-                        self.structure = _bp_to_struct(structure)
-                    else:
-                        raise Exception("Unrecognized structure format for %s"%(structure))
+            self.structure = structure
+            # if isinstance(structure, list):
+            #     if len(structure) > 0:
+            #         first = structure[0]
+            #         if len(first)==1:
+            #             self.structure = check_structure(structure)
+            #         elif len(first)==2:
+            #             self.structure = _bp_to_struct(structure)
+            #         else:
+            #             raise Exception("Unrecognized structure format for %s"%(structure))
             # Dot-Bracket Notation
-            elif isinstance(structure, str):
-                self.structure = _parse_vienna(structure)
-                self.dbn = structure
             self.length = len(self.structure)
         if sequence is not None:
             self.length = max(self.length,len(sequence))
             self.sequence = sequence
         # Now we know the length, let's extend the sequence and structure if necessary
-        self.sequence += " "*(self.length-len(self.sequence))
-        self.structure += [-1]*(self.length-len(self.structure))
+        # self.sequence += " "*(self.length-len(self.sequence))
+        # self.structure += [-1]*(self.length-len(self.structure))
 
-    def format_structure(self):
-        """Return secondary structure in dot-brackaet notation
-        """
-        def greedy_fill(c1, c2, res, ss, i, j):
-            if i <= j:
-                k = ss[i]
-                if k == -1:
-                    greedy_fill(c1, c2, res, ss, i+1, j)
-                elif k > i:
-                    if k <= j:
-                        res[i], res[k] = c1, c2
-                        ss[i], ss[k] = -1, -1
-                        greedy_fill(c1, c2, res, ss, i+1, k-1)
-                        greedy_fill(c1, c2, res, ss, k+1, j)
+    # def format_structure(self):
+    #     """Return secondary structure in dot-brackaet notation
+    #     """
+    #     def greedy_fill(c1, c2, res, ss, i, j):
+    #         if i <= j:
+    #             k = ss[i]
+    #             if k == -1:
+    #                 greedy_fill(c1, c2, res, ss, i+1, j)
+    #             elif k > i:
+    #                 if k <= j:
+    #                     res[i], res[k] = c1, c2
+    #                     ss[i], ss[k] = -1, -1
+    #                     greedy_fill(c1, c2, res, ss, i+1, k-1)
+    #                     greedy_fill(c1, c2, res, ss, k+1, j)
 
-        res = ["." for _ in range(self.length)]
-        ss = self.structure[:]
-        for c1, c2 in PARENTHESES_SYSTEMS:
-            greedy_fill(c1, c2, res, ss, i=0, j=self.length-1)
-            finished = True
-            for i in ss:
-                if i != -1:
-                    finished = False
-            if finished:
-                break
-        return "".join(res)
+    #     res = ["." for _ in range(self.length)]
+    #     ss = self.structure[:]
+    #     for c1, c2 in PARENTHESES_SYSTEMS:
+    #         greedy_fill(c1, c2, res, ss, i=0, j=self.length-1)
+    #         finished = True
+    #         for i in ss:
+    #             if i != -1:
+    #                 finished = False
+    #         if finished:
+    #             break
+    #     return "".join(res)
 
     def _gen_input_cmd(self):
         return ['-sequenceDBN', self.sequence, '-structureDBN', self.format_structure()]
@@ -443,7 +505,7 @@ class Motif(BasicDraw):
         seq = ""
         struct = ""
         extra_bps = []
-        pos = 0
+        pos = 1
         for i, c in enumerate(motif):
             if c == "*":
                 if sequence is not None and not sequence[i] == '*':
@@ -466,8 +528,8 @@ class Motif(BasicDraw):
         struct = "(" + struct + ")"
         self.sequence = seq
         self.structure = struct
-        self.length = pos + 2
-        extra_bps.append((0, self.length - 1))
+        self.length = pos + 1
+        extra_bps.append((1, self.length))
         self.extra_bps = extra_bps
 
         # Default Bases Styles
@@ -498,8 +560,8 @@ class Motif(BasicDraw):
         for (i,j) in self.extra_bps:
             dummybps += [i, j]
             self.add_aux_BP(i=i, j=j, color="#DDDDDD")
-        self.add_aux_BP(i=1, j=self.length-2, color="#000000", thickness=2)
+        self.add_aux_BP(i=2, j=self.length-1, color="#000000", thickness=2)
 
-        self.add_bases_style(self.rootBasesStyle, [1, self.length-2])
+        self.add_bases_style(self.rootBasesStyle, [2, self.length-1])
         self.add_bases_style(self.dummyBasesStyle, dummybps)
         super().savefig(output)

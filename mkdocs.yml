@@ -11,6 +11,7 @@ nav:
   - Home: index.md
   - Gallery:
     - Riboswitch cartoon: gallery/Cartoon-like.ipynb
+    - 2.5D module drawing with hack mode: gallery/Module-drawing-with-hacked-option.ipynb
   - API:
     - Drawing Classes: drawing.md
     - Configurations: config.md
@@ -19,18 +20,22 @@ nav:
 plugins:
   - search
   - mkdocstrings:
+      default_handler: python
       handlers:
         python:
-          selection:
+          paths: [src]
+          options:
+            show_root_heading: false
             filters:
               - "!^_"
-              - "^__init__$"
-          rendering:
+              - "^__"
             show_root_toc_entry: False
-      watch:
-        - src/varnaapi
+            heading_level: 2
+            show_symbol_type_heading: true
   - mkdocs-jupyter
 
+watch:
+  - src
 
 markdown_extensions:
   - footnotes

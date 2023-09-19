@@ -2,7 +2,9 @@ VARNA API is a Python interface for [VARNA](http://varna.lri.fr/index.php) (v3-9
 VARNA allows users to produce drawing in a non-iteractive way via command line.
 However, the command line might be massive and complicate in some use cases.
 VARNA API aims to simplify such process.
+The [online documentation](https://htyao.gitlab.io/varna-api/) is available.
 
+!!! danger "Starting from v1.1.0, VARNA API uses _1-indexed_ to count RNA bases. The change aims to better align with VARNA and ViennaRNA."
 
 ## Example
 
@@ -16,8 +18,8 @@ The equivalence using VARNA API would be
 ```python
 from varnaapi import Structure
 v = Structure(structure="((((((.((((((........)))))).((((((.......))))))..))))))")
-v.add_highlight_region(10,20)
-v.add_aux_BP(13, 19, edge5="s", color="#FF00FF")
+v.add_highlight_region(11,21)
+v.add_aux_BP(14, 20, edge5="s", color="#FF00FF")
 v.savefig("example.png")
 ```
 ## Installation
@@ -105,11 +107,10 @@ varnaapi.load_config('config.yml')
 VARNA allows different operations on drawing, such as highlighting a region, adding auxiliary base pairs.
 This can be achieved by using the proper functions. We invite users to read API for more details.
 ```python
-v.add_highlight_region(0, 5, radius=20)
-v.add_aux_bp(0, 9, color='red')
+v.add_highlight_region(1, 6, radius=20)
+v.add_aux_bp(1, 10, color='red')
 ```
 
-!!! note "The VARNA API is 0-indexed unlike VARNA, which is 1-indexed."
 
 ## Credits
 Please kindly cite VARNA [supporting manuscript](https://doi.org/10.1093/bioinformatics/btp250) if you use VARNA API in your research.

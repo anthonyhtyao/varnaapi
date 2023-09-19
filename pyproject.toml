@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+varnaapi = ["*.yml"]
+
+[project]
+name = "varnaapi"
+version = "1.1.0"
+authors = [
+    {name= "Hua-Ting Yao", email="hua-ting.yao@polytechnique.edu"}
+]
+description = "Python helper for RNA visualization tool VARNA"
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "colour",
+    "deprecated",
+    "pyyaml",
+    "ipython",
+    "platformdirs"
+]
+
+[project.urls]
+"Homepage" = "https://htyao.gitlab.io/varna-api/"
+"Source Code" = "https://gitlab.inria.fr/amibio/varna-api"
+"VARNA" = "https://varna.lisn.upsaclay.fr/index.php"

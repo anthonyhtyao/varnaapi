@@ -3,6 +3,15 @@
 import yaml
 from colour import Color
 
+import varnaapi.settings
+
+def _union_if_hack(*lst):
+    """Return union set of two iterables if hack mode if enable, otherwise first one
+    """
+    if varnaapi.settings.CONFIG['hackmode']:
+        return set.union(*[set(t) for t in lst])
+    else:
+        return lst[0]
 
 # Define yaml-related function for Color object
 def color_representer(dumper, data):
@@ -27,6 +36,7 @@ yaml.add_constructor('!color', color_constructor)
 
 COLOR_LIST = ['backbone', 'background', 'baseInner', 'baseName', 'baseNum',
               'baseOutline', 'bp', 'gapsColor', 'nsBasesColor']
+COLOR_LIST: list
 """Allowed options for basic color setting
 
     | Name         | Object in panel                                         | Default Color |
@@ -63,6 +73,7 @@ COLOR_DEFAULT = {
 #################
 
 BOOLEAN_OPTIONS = ['autoHelices', 'autoInteriorLoops', 'autoTerminalLoops', 'drawBackbone', 'drawBases', 'drawNC', 'drawTertiary', 'fillBases', 'flat']
+BOOLEAN_OPTIONS: list
 """Boolean option list
 
     | Name              | Option                                                                                                                                        | Default |
@@ -102,6 +113,7 @@ BOOLEAN_DEFAULT = {
 
 NUMERIC_TYPE = {'border': tuple, 'bpIncrement': float, 'periodNum': int, 'resolution': float, 'rotation': float, 'spaceBetweenBases': float, 'zoom': float}
 NUMERIC_PARAMS = [k for k in NUMERIC_TYPE.keys()]
+NUMERIC_PARAMS: list
 """Allowed numeric parameters
 
     | Name              | Type  | Description                                                                                                                                                                                                    | Default|
@@ -146,14 +158,14 @@ BP_STYLES = ['none', 'simple', 'rnaviz', 'lw']
     | lw     | Both canonical and non-canonical base-pairs are rendered according to the Leontis/Westhof nomenclature (Default) |
 
 
-    Example:
+    Examples:
         >>> BasicDraw.update(bpStyle="simple")
 """
 
 ALGORITHMS = ['line', 'circular', 'radiate', 'naview']
 """Allowed options for drawing algorithms (`algorithm`) are `line`, `circular`, `radiate`, and `naview`. The default value is `radiate`.
 
-    Example:
+    Examples:
         >>> BasicDraw.update(algorithm="line")
 """
 
@@ -168,20 +180,26 @@ PARAM_TYPE.update(COLOR_TYPE)
 PARAM_TYPE.update(NUMERIC_TYPE)
 PARAM_TYPE.update(CHOICES_TYPE)
 
+# Default value used in VARNA
 _PARAM_DEFAULT = BOOLEAN_DEFAULT.copy()
 _PARAM_DEFAULT.update(COLOR_DEFAULT)
 _PARAM_DEFAULT.update(NUMERIC_DEFAULT)
 _PARAM_DEFAULT.update(CHOICES_DEFAULT)
 
-
+# Value from global loading
 PARAM_DEFAULT = _PARAM_DEFAULT.copy()
 
 
 def load_config(filename):
+    """Load global style parameters
+
+    Args:
+        filename: path to file
+    """
     global PARAM_DEFAULT
     with open(filename, 'r') as f:
         params = yaml.load(f, Loader=yaml.Loader)
-    for par in PARAM_LIST:
+    for par in _union_if_hack(PARAM_LIST, params.keys()):
         val = params.get(par, None)
         if val is not None:
             val = _params_type_check(par, val)
@@ -190,13 +208,19 @@ def load_config(filename):
 
 def _params_type_check(par, val):
     """Private parameter type check.
+    In hack mode, check only color type
     """
-    typ = PARAM_TYPE[par]
+    typ = PARAM_TYPE.get(par, None)
     if typ == 'color':
         try:
             val = Color(val)
         except ValueError as e:
             raise TypeError(str(e))
+    # Turn off type chack in hack mode
+    elif varnaapi.settings.CONFIG['hackmode']:
+        return val
+    elif typ is None:
+        raise TypeError("Unknown parameter: {}".format(par))
     elif par == 'border':
         try:
             assert val is None or (isinstance(val[0], int) and isinstance(val[1], int))
@@ -221,9 +245,10 @@ class _DefaultObj:
 
     def _get_diff(self):
         res = {}
-        for par in self.params:
-            val = self.values[par]
-            if val is not None and not val == self.default[par]:
+        for par, val in self.values.items():
+            if not varnaapi.settings.CONFIG['hackmode']:
+                assert par in self.params
+            if val is not None and not val == self.default.get(par, None):
                 if isinstance(val, Color):
                     res[par] = val.get_hex_l()
                 else:
@@ -241,7 +266,7 @@ class _DefaultObj:
 TITLE_DEFAULT = {'title': '', 'titleColor': Color('#000000'), 'titleSize': 19}
 
 class _Title(_DefaultObj):
-    def __init__(self, title, color, size):
+    def __init__(self, title, color, size, **kwargs):
         super().__init__(**TITLE_DEFAULT)
         try:
             assert not str(title) == ""
@@ -250,16 +275,20 @@ class _Title(_DefaultObj):
         self.values['title'] = str(title)
         self.values['titleColor'] = Color(color)
         self.values['titleSize'] = int(size)
+        if varnaapi.settings.CONFIG['hackmode']:
+            self.values.update(kwargs)
 
 
 HIGHLIGHT_DEFAULT = {'radius': 16, 'fill': Color('#BCFFDD'), 'outline': Color('#6ED86E')}
 
 class _Highlight(_DefaultObj):
-    def __init__(self, radius, fill, outline):
+    def __init__(self, radius, fill, outline, **kwargs):
         super().__init__(**HIGHLIGHT_DEFAULT)
         self.values['radius'] = float(radius)
         self.values['fill'] = Color(fill)
         self.values['outline'] = Color(outline)
+        if varnaapi.settings.CONFIG['hackmode']:
+            self.values.update(kwargs)
 
     def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
@@ -284,9 +313,12 @@ class BasesStyle(_DefaultObj):
 
     __See Also:__ [BasicDraw.add_bases_style][varnaapi.BasicDraw.add_bases_style]
     """
-    def __init__(self, fill=None, outline=None, label=None, number=None):
+    def __init__(self, fill=None, outline=None, label=None, number=None, **kwargs):
         super().__init__(fill=COLOR_DEFAULT['baseInner'], outline=COLOR_DEFAULT['baseOutline'], label=COLOR_DEFAULT['baseName'], number=COLOR_DEFAULT['baseNum'])
-        self._update(fill=fill, outline=outline, label=label, number=number)
+        if varnaapi.settings.CONFIG['hackmode']:
+            self._update(fill=fill, outline=outline, label=label, number=number, **kwargs)
+        else:
+            self._update(fill=fill, outline=outline, label=label, number=number)
 
     def _update(self, **kwargs):
         """Update component _colors.
@@ -315,17 +347,24 @@ BP_CHOICES = {'edge5': ['wc', 'h', 's'], 'edge3': ['wc', 'h', 's'], 'stericity':
 class _BPStyle(_DefaultObj):
     def __init__(self, **kwargs):
         super().__init__(**BP_DEFAULT)
-        for key, val in BP_CHOICES.items():
-            if key in kwargs:
+        res = {}
+        for key, val in kwargs.items():
+            if key == 'color':
+                res['color'] = Color(val)
+            elif varnaapi.settings.CONFIG['hackmode']:
+                res[key] = val
+            elif key == 'thickness':
+                res['thickness'] = float(val)
+            elif key in BP_CHOICES:
                 try:
-                    assert kwargs[key] in val
-                    self.values[key] = kwargs[key]
+                    assert val in BP_CHOICES[key]
+                    res[key] = val
                 except AssertionError:
-                    raise TypeError('Value of {} should be one of {}'.format(key, val))
-        if 'color' in kwargs:
-            self.values['color'] = Color(kwargs['color'])
-        if 'thickness' in kwargs:
-            self.values['thickness'] = float(kwargs['thickness'])
+                    raise TypeError('Value of {} should be one of {}'.format(key, BP_CHOICES[key]))
+            else:
+                raise TypeError('{} is not a valid keyword'.format(key))
+        self.values = res
+
 
     def _to_cmd(self, color):
         self.default['color'] = color
@@ -340,7 +379,7 @@ class _BPStyle(_DefaultObj):
 ANNOTATION_DEFAULT = {'type': 'L', 'color': Color('black'), 'size': 12}
 
 class _Annotation(_DefaultObj):
-    def __init__(self, text, aType, anchor, color="#000000", size=12):
+    def __init__(self, text, aType, anchor, color="#000000", size=12, **kwargs):
         super().__init__(**ANNOTATION_DEFAULT)
         try:
             assert not str(text) == ""
@@ -351,6 +390,9 @@ class _Annotation(_DefaultObj):
         self.values['color'] = Color(color)
         self.values['size'] = int(size)
         self.anchor = anchor
+
+        if varnaapi.settings.CONFIG['hackmode']:
+            self.values.update(kwargs)
 
     def _to_cmd(self):
         res = ["{}={}".format(k, v) for k, v in self._get_diff().items()]
@@ -369,22 +411,22 @@ class BaseAnnotation(_Annotation):
         color (color): Annotation color
         size (int): Font size
     """
-    def __init__(self, text:str, anchor:int, color="#000000", size=12):
-        super().__init__(text, 'B', int(anchor), color, size)
+    def __init__(self, text:str, anchor:int, color="#000000", size=12, **kwargs):
+        super().__init__(text, 'B', int(anchor), color, size, **kwargs)
 
 class LoopAnnotation(_Annotation):
     """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on a loop.
     Argument `anchor` can be index of any base in the loop of interest.
     """
-    def __init__(self, text, anchor, color="#000000", size=12):
-        super().__init__(text, 'L', int(anchor), color, size)
+    def __init__(self, text, anchor, color="#000000", size=12, **kwargs):
+        super().__init__(text, 'L', int(anchor), color, size,**kwargs)
 
 class HelixAnnotation(_Annotation):
     """Same as [BaseAnnotation][varnaapi.param.BaseAnnotation] but on an helix.
     Argument `anchor` can be index of any base in the helix of interest.
     """
-    def __init__(self, text, anchor, color="#000000", size=12):
-        super().__init__(text, 'H', int(anchor), color, size)
+    def __init__(self, text, anchor, color="#000000", size=12, **kwargs):
+        super().__init__(text, 'H', int(anchor), color, size, **kwargs)
 
 class StaticAnnotation(_Annotation):
     """Annotation on a specified position in VARNA drawing.
@@ -401,8 +443,8 @@ class StaticAnnotation(_Annotation):
     Examples:
         >>> sa = StaticAnnotation("Hello World", 100, 150, color="#FF0000")
     """
-    def __init__(self, text, x, y, color="#000000", size=12):
-        super().__init__(text, 'P', (int(x), int(y)),  color, size)
+    def __init__(self, text, x, y, color="#000000", size=12, **kwargs):
+        super().__init__(text, 'P', (int(x), int(y)),  color, size, **kwargs)
 
 CHEM_DEFAULT = {'glyph': 'arrow', 'dir': 'in', 'intensity': 1, 'color': Color('#0000B2')}
 CHEM_CHOICES = {'glyph': ['arrow', 'dot', 'pin', 'triangle'], 'dir': ['in', 'out']}
@@ -410,17 +452,24 @@ CHEM_CHOICES = {'glyph': ['arrow', 'dot', 'pin', 'triangle'], 'dir': ['in', 'out
 class _ChemProb(_DefaultObj):
     def __init__(self, **kwargs):
         super().__init__(**CHEM_DEFAULT)
-        for key, val in CHEM_CHOICES.items():
-            if key in kwargs:
+        res = {}
+        for key, val in kwargs.items():
+            if key == 'color':
+                res['color'] = Color(val)
+            elif varnaapi.settings.CONFIG['hackmode']:
+                res[key] = val
+            elif key == 'intensity':
+                res['intensity'] = float(val)
+            elif key in CHEM_CHOICES:
                 try:
-                    assert kwargs[key] in val
-                    self.values[key] = kwargs[key]
+                    assert val in CHEM_CHOICES[key]
+                    res[key] = val
                 except AssertionError:
-                    raise TypeError('Value of {} should be one of {}'.format(key, val))
-        if 'color' in kwargs:
-            self.values['color'] = Color(kwargs['color'])
-        if 'intensity' in kwargs:
-            self.values['intensity'] = float(kwargs['intensity'])
+                    raise TypeError('Value of {} should be one of {}'.format(key, CHEM_CHOICES[key]))
+            else:
+                raise TypeError('{} is not a valid keyword'.format(key))
+        self.values = res
+
 
     def _to_cmd(self):
         return ','.join('{}={}'.format(k, v) for k, v in self._get_diff().items())
@@ -428,7 +477,7 @@ class _ChemProb(_DefaultObj):
 CM_DEFAULT = ["red", "blue", "green", "heat", "energy", "bw"]
 
 class _ColorMap:
-    def __init__(self, values, vMin, vMax, caption, style):
+    def __init__(self, values, vMin, vMax, caption, style, **kwargs):
         self.values = list(map(float, values))
         if vMin is not None:
             vMin = float(vMin)
@@ -446,6 +495,8 @@ class _ColorMap:
 
         else:
             raise ValueError('Style should be either a string of {} or a dictionary'.format(CM_DEFAULT))
+        if varnaapi.settings.CONFIG['hackmode']:
+            self.kwargs = kwargs
 
     def _to_cmd(self):
         cmd = []
@@ -458,6 +509,9 @@ class _ColorMap:
             cmd += ['-colorMapMax', str(self.vMax)]
         if self.style not in ['energy', '']:
             cmd += ['-colorMapStyle', self.style]
+        if varnaapi.settings.CONFIG['hackmode']:
+            for key, val in self.kwargs:
+                cmd += ['-{}'.format(key), '{}'.format(val)]
 
         return cmd
 
@@ -477,29 +531,29 @@ class _VarnaConfig:
         self._loaded_params = {key: None for key in PARAM_LIST}
 
     def _get_value(self, param):
-        if self._params[param] is not None:
-            return self._params[param]
-        elif self._loaded_params[param] is not None:
-            return self._loaded_params[param]
-        elif PARAM_DEFAULT[param] is not None:
-            return PARAM_DEFAULT[param]
+        if self._params.get(param, None) is not None:
+            return self._params.get(param, None)
+        elif self._loaded_params.get(param, None) is not None:
+            return self._loaded_params.get(param, None)
+        elif PARAM_DEFAULT.get(param, None) is not None:
+            return PARAM_DEFAULT.get(param, None)
         else:
-            return _PARAM_DEFAULT[param]
+            return _PARAM_DEFAULT.get(param, None)
 
     def _diff_param(self):
         """Get param name and value that is different than the default
         """
         params = {}
-        for key in PARAM_LIST:
+        for key in _union_if_hack(PARAM_LIST, self._params.keys(), self._loaded_params.keys()):
             val = self._get_value(key)
-            default = _PARAM_DEFAULT[key]
+            default = _PARAM_DEFAULT.get(key, None)
             if val is not None and not val == default:
                 params[key] = val
         return params
 
     def update(self, loaded=False, **kwargs):
         """Easy way to update params value.
-        The list of keyward arguments can be found [here](/config)
+        The list of keyward arguments can be found [here](config.md)
         """
         # Assert argument is in the parameter list and type check
         if loaded:
@@ -509,7 +563,8 @@ class _VarnaConfig:
         for key, value in kwargs.items():
             if value is not None:
                 try:
-                    assert key in PARAM_LIST
+                    if not varnaapi.settings.CONFIG['hackmode']:
+                        assert key in PARAM_LIST
                     value = _params_type_check(key, value)
                     params[key] = value
                 except AssertionError:
@@ -543,9 +598,9 @@ class _VarnaConfig:
     def set_bp_style(self, style):
         """Set default style for base-pairs rendering, chosen among [BP_STYLES][varnaapi.param.BP_STYLES]
 
-        __Note:__ `lw` is set by default
+        Note: `lw` is set by default
 
-        Example:
+        Examples:
             >>> v = varnaapi.Structure()
             >>> v.set_bp_style("simple")
         """
@@ -557,7 +612,7 @@ class _VarnaConfig:
 
         cmd = []
         for par, val in self.get_params().items():
-            typ = PARAM_TYPE[par]
+            typ = PARAM_TYPE.get(par, None)
             if typ == 'color':
                 cmd.append('-' + par)
                 cmd.append(val.get_hex_l())
@@ -570,10 +625,20 @@ class _VarnaConfig:
         return cmd
 
     def dump_param(self, filename):
+        """Store style parameters into file
+
+        Args:
+            filename: path to the file
+        """
         with open(filename, 'w') as f:
             yaml.dump(self.get_params(complete=True), f)
 
     def load_param(self, filename):
+        """Load existing style parameters from file
+
+        Args:
+            filename: path to the file
+        """
         with open(filename, 'r') as f:
             self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader))
 

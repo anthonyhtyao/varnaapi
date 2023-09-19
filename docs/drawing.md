@@ -6,20 +6,20 @@ The first two correspond to the classic and the comparison mode in VARNA. The la
 - [Motif][varnaapi.Motif]: Customized class to draw motif, an union of loops.
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["BasicDraw"]
       inherited_members: True
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["Structure"]
 
 ::: varnaapi.models
-    selection:
+    options:
       members: ["Comparison"]
 
 ::: varnaapi.models
-    selection:
+    options:
       filters: ["!savefig"]
       members: ["Motif"]
 
@@ -33,8 +33,8 @@ Figure above is created with
 from varnaapi import Motif
 from varnaapi.param import BaseAnnotation
 m = Motif("((*)(*)(((*)(*))))", sequence="  *AU* CC *  *    ")
-m.add_annotation(BaseAnnotation(" Root", 1))
-m.add_annotation(BaseAnnotation("Dummy", 13))
+m.add_annotation(BaseAnnotation(" Root", 2))
+m.add_annotation(BaseAnnotation("Dummy", 14))
 # Show how base indices work for motif.
 # Remeber that VARNA is 1-indexed
 m.set_default_color(baseNum="#a6a6a6")
