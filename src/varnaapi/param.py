@@ -191,6 +191,11 @@ PARAM_DEFAULT = _PARAM_DEFAULT.copy()
 
 
 def load_config(filename):
+    """Load global style parameters
+
+    Args:
+        filename: path to file
+    """
     global PARAM_DEFAULT
     with open(filename, 'r') as f:
         params = yaml.load(f, Loader=yaml.Loader)
@@ -548,7 +553,7 @@ class _VarnaConfig:
 
     def update(self, loaded=False, **kwargs):
         """Easy way to update params value.
-        The list of keyward arguments can be found [here](/config)
+        The list of keyward arguments can be found [here](config.md)
         """
         # Assert argument is in the parameter list and type check
         if loaded:
@@ -620,10 +625,20 @@ class _VarnaConfig:
         return cmd
 
     def dump_param(self, filename):
+        """Store style parameters into file
+
+        Args:
+            filename: path to the file
+        """
         with open(filename, 'w') as f:
             yaml.dump(self.get_params(complete=True), f)
 
     def load_param(self, filename):
+        """Load existing style parameters from file
+
+        Args:
+            filename: path to the file
+        """
         with open(filename, 'r') as f:
             self.update(loaded=True, **yaml.load(f, Loader=yaml.Loader))
 

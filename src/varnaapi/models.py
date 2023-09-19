@@ -96,7 +96,7 @@ class BasicDraw(_VarnaConfig):
         self.to_flip = []
         self.smart_flip = False
 
-    def add_aux_BP(self, i:int, j:int, edge5='wc', edge3='wc', stericity='cis', color='blue', thickness:float=1, **kwargs):
+    def add_aux_BP(self, i:int, j:int, edge5:str='wc', edge3:str='wc', stericity:str='cis', color='blue', thickness:float=1, **kwargs):
         """Add an additional base pair `(i,j)`, possibly defining and using custom style
 
         Args:
@@ -326,8 +326,7 @@ class BasicDraw(_VarnaConfig):
         return []
 
     def savefig(self, output, show:bool=False):
-        """
-        Call VARNA to draw and store the paint in output
+        """Call VARNA to draw and store the paint in output
 
         Args:
             output: Output file name with extension is either png or svg

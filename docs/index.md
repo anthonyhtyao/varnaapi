@@ -2,6 +2,7 @@ VARNA API is a Python interface for [VARNA](http://varna.lri.fr/index.php) (v3-9
 VARNA allows users to produce drawing in a non-iteractive way via command line.
 However, the command line might be massive and complicate in some use cases.
 VARNA API aims to simplify such process.
+The [online documentation](https://htyao.gitlab.io/varna-api/) is available.
 
 !!! danger "Starting from v1.1.0, VARNA API uses _1-indexed_ to count RNA bases. The change aims to better align with VARNA and ViennaRNA."
 

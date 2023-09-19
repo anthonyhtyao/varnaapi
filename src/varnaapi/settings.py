@@ -14,22 +14,31 @@ CONFIG_USER = Path(CONFIG_DIR, 'config-settings-v{}.yml'.format(CONFIG_VERSION))
 CONFIG = {}
 
 def check_settings_exists():
+    """Check if configuration file exist, if no create one.
+    The function is called when the package is imported
+    """
     if not CONFIG_USER.exists():
         copyfile(CONFIG_ORIGIN, CONFIG_USER)
 
 
 def load_settings():
+    """Load configuration from file
+    """
     global CONFIG
     CONFIG = yaml.load(CONFIG_USER.open(), Loader=yaml.Loader)
 
 
 def dump_settings():
+    """Write down configuration
+    """
     yaml.dump(CONFIG, CONFIG_USER.open('w'))
 
 
 def enable_hack(enable=True, write=False):
     """Enable hack mode.
     When enable, most of the validity check is turned off, except for color.
+
+    If write is True, the choice of enable or disable is stored for the future use
     """
     global CONFIG
     CONFIG['hackmode'] = enable
@@ -38,6 +47,8 @@ def enable_hack(enable=True, write=False):
 
 def set_VARNA(path, write=True):
     """Set VARNA location
+
+    If write is True, the given path is stored for the future use
     """
     global CONFIG
     CONFIG['varnapath'] = path
