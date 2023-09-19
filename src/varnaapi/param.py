@@ -3,21 +3,12 @@
 import yaml
 from colour import Color
 
-# Turn off most of sytax check
-ENABLE_HACK = False
-
-def enable_hack(enable=True):
-    """Enable hack mode.
-    When enable, most of the validity check is turned off, except for color.
-    """
-    global ENABLE_HACK
-    ENABLE_HACK = enable
-
+import varnaapi.settings
 
 def _union_if_hack(*lst):
     """Return union set of two iterables if hack mode if enable, otherwise first one
     """
-    if ENABLE_HACK:
+    if varnaapi.settings.CONFIG['hackmode']:
         return set.union(*[set(t) for t in lst])
     else:
         return lst[0]
@@ -221,7 +212,7 @@ def _params_type_check(par, val):
         except ValueError as e:
             raise TypeError(str(e))
     # Turn off type chack in hack mode
-    elif ENABLE_HACK:
+    elif varnaapi.settings.CONFIG['hackmode']:
         return val
     elif typ is None:
         raise TypeError("Unknown parameter: {}".format(par))
@@ -250,7 +241,7 @@ class _DefaultObj:
     def _get_diff(self):
         res = {}
         for par, val in self.values.items():
-            if not ENABLE_HACK:
+            if not varnaapi.settings.CONFIG['hackmode']:
                 assert par in self.params
             if val is not None and not val == self.default.get(par, None):
                 if isinstance(val, Color):
@@ -279,7 +270,7 @@ class _Title(_DefaultObj):
         self.values['title'] = str(title)
         self.values['titleColor'] = Color(color)
         self.values['titleSize'] = int(size)
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             self.values.update(kwargs)
 
 
@@ -291,7 +282,7 @@ class _Highlight(_DefaultObj):
         self.values['radius'] = float(radius)
         self.values['fill'] = Color(fill)
         self.values['outline'] = Color(outline)
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             self.values.update(kwargs)
 
     def _to_cmd(self):
@@ -319,7 +310,7 @@ class BasesStyle(_DefaultObj):
     """
     def __init__(self, fill=None, outline=None, label=None, number=None, **kwargs):
         super().__init__(fill=COLOR_DEFAULT['baseInner'], outline=COLOR_DEFAULT['baseOutline'], label=COLOR_DEFAULT['baseName'], number=COLOR_DEFAULT['baseNum'])
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             self._update(fill=fill, outline=outline, label=label, number=number, **kwargs)
         else:
             self._update(fill=fill, outline=outline, label=label, number=number)
@@ -355,7 +346,7 @@ class _BPStyle(_DefaultObj):
         for key, val in kwargs.items():
             if key == 'color':
                 res['color'] = Color(val)
-            elif ENABLE_HACK:
+            elif varnaapi.settings.CONFIG['hackmode']:
                 res[key] = val
             elif key == 'thickness':
                 res['thickness'] = float(val)
@@ -395,7 +386,7 @@ class _Annotation(_DefaultObj):
         self.values['size'] = int(size)
         self.anchor = anchor
 
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             self.values.update(kwargs)
 
     def _to_cmd(self):
@@ -460,7 +451,7 @@ class _ChemProb(_DefaultObj):
         for key, val in kwargs.items():
             if key == 'color':
                 res['color'] = Color(val)
-            elif ENABLE_HACK:
+            elif varnaapi.settings.CONFIG['hackmode']:
                 res[key] = val
             elif key == 'intensity':
                 res['intensity'] = float(val)
@@ -499,7 +490,7 @@ class _ColorMap:
 
         else:
             raise ValueError('Style should be either a string of {} or a dictionary'.format(CM_DEFAULT))
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             self.kwargs = kwargs
 
     def _to_cmd(self):
@@ -513,7 +504,7 @@ class _ColorMap:
             cmd += ['-colorMapMax', str(self.vMax)]
         if self.style not in ['energy', '']:
             cmd += ['-colorMapStyle', self.style]
-        if ENABLE_HACK:
+        if varnaapi.settings.CONFIG['hackmode']:
             for key, val in self.kwargs:
                 cmd += ['-{}'.format(key), '{}'.format(val)]
 
@@ -567,7 +558,7 @@ class _VarnaConfig:
         for key, value in kwargs.items():
             if value is not None:
                 try:
-                    if not ENABLE_HACK:
+                    if not varnaapi.settings.CONFIG['hackmode']:
                         assert key in PARAM_LIST
                     value = _params_type_check(key, value)
                     params[key] = value

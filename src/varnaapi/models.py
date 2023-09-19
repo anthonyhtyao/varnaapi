@@ -9,10 +9,8 @@ from deprecated import deprecated
 
 from IPython.display import Image, display, SVG
 
-from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap, ENABLE_HACK
-
-
-_VARNA_PATH="VARNAv3-93.jar"
+from varnaapi.param import _VarnaConfig, BasesStyle, _Title, _Highlight, _Annotation, _BPStyle, _ChemProb, _ColorMap
+import varnaapi.settings
 
 
 PARENTHESES_SYSTEMS = [
@@ -25,14 +23,9 @@ PARENTHESES_OPENING = [c1 for c1, c2 in PARENTHESES_SYSTEMS]
 PARENTHESES_CLOSING = {c2: c1 for c1, c2 in PARENTHESES_SYSTEMS}
 
 
-def set_VARNA(path):
-    """Set VARNA location
-    """
-    global _VARNA_PATH
-    _VARNA_PATH = path
 
 def assert_valid_interval(length, *args):
-    if not ENABLE_HACK:
+    if not varnaapi.settings.CONFIG['hackmode']:
         for i in args:
             if i < 1 or i > length:
                 raise Exception("{} out of range".format(args))
@@ -255,7 +248,7 @@ class BasicDraw(_VarnaConfig):
         """
         Return command to run VARNA
         """
-        cmd = ['java', '-cp', _VARNA_PATH, 'fr.orsay.lri.varna.applications.VARNAcmd']
+        cmd = ['java', '-cp', varnaapi.settings.CONFIG['varnapath'], 'fr.orsay.lri.varna.applications.VARNAcmd']
 
         cmd += self._gen_input_cmd()
 
