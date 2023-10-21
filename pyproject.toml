@@ -10,7 +10,7 @@ varnaapi = ["*.yml"]
 
 [project]
 name = "varnaapi"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
     {name= "Hua-Ting Yao", email="hua-ting.yao@polytechnique.edu"}
 ]

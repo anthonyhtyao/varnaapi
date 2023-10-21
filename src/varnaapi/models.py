@@ -555,7 +555,7 @@ class Motif(BasicDraw):
             raise Exception('The argument should be BasesStyle object')
         self.rootBasesStyle = style
 
-    def savefig(self, output):
+    def savefig(self, output, show=False):
         dummybps = []
         for (i,j) in self.extra_bps:
             dummybps += [i, j]
@@ -564,4 +564,4 @@ class Motif(BasicDraw):
 
         self.add_bases_style(self.rootBasesStyle, [2, self.length-1])
         self.add_bases_style(self.dummyBasesStyle, dummybps)
-        super().savefig(output)
+        super().savefig(output, show)
