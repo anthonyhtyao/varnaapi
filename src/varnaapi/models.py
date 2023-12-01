@@ -197,7 +197,7 @@ class BasicDraw(_VarnaConfig):
 
                     ['red', 'blue', 'green', 'heat', 'energy', 'bw']
 
-                - customized style in a list of pairs, (value, color)
+                - customized style in dictionary {value: color}
         """
         self.colormap = _ColorMap(values, vMin, vMax, caption, style, **kwargs)
 

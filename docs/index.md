@@ -2,16 +2,18 @@ VARNA API is a Python interface for [VARNA](http://varna.lri.fr/index.php) (v3-9
 VARNA allows users to produce drawing in a non-iteractive way via command line.
 However, the command line might be massive and complicate in some use cases.
 VARNA API aims to simplify such process.
-The [online documentation](https://htyao.gitlab.io/varna-api/) is available.
+The [online documentation](https://amibio.gitlabpages.inria.fr/varna-api/) is available.
 
-!!! danger "Starting from v1.1.0, VARNA API uses _1-indexed_ to count RNA bases. The change aims to better align with VARNA and ViennaRNA."
+!!! danger "Starting from v1.1.0, VARNA API uses _1-indexed_ to count RNA bases. The change aims to better align with ViennaRNA and the command line interface of VARNA."
+
+!!! warning "VARNA api v2 is under the development with the help of [JPype](https://jpype.readthedocs.io/en/latest/index.html). We aim to provide a direct access to VARNA library while keeping backward compatibility."
 
 ## Example
 
 The command below highlights region 11-21 and adds a non-canonical base pair at position (14,20)
 on secondary structure `((((((.((((((........)))))).((((((.......))))))..))))))`.
 ```bash
-java -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "                                                       " -structureDBN "((((((.((((((........)))))).((((((.......))))))..))))))" -o example.png -auxBPs "(14,20):color=#ff00ff" -highlightRegion "11-21"
+java -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -structureDBN "((((((.((((((........)))))).((((((.......))))))..))))))" -o example.png -auxBPs "(14,20):color=#ff00ff" -highlightRegion "11-21"
 ```
 
 The equivalence using VARNA API would be
@@ -27,21 +29,28 @@ v.savefig("example.png")
 python3 -m pip install varnaapi
 ```
 
-## Usage
+## Basic Usage
 Here, we show the basic usage of varnaapi.
-The first thing after importing `varnaapi` is to setup the location of VARNA to use.
-
-!!! note "By default, the library assumes the VARNA v3-93 in the current folder is used (`./VARNAv3-93.jar`)"
+The first thing after importing `varnaapi` is to setup the location of VARNA if it's different than default.
 
 ```python
 import varnaapi
 varnaapi.set_VARNA(path_to_VARNA)
 ```
+
+???+ note
+
+    By default, the library assumes the VARNA v3-93 in the current folder is used (`./VARNAv3-93.jar`).
+    To avoid setting the path each time, one can turn on the flag `write` via `set_VARNA(path_to_VARNA, write=True)` once.
+    This stores the path into a configuration file and will be loaded automatically next time when `varnaapi` is used.
+
 Each drawing in VARNA is an object of class inherited from [BasicDraw][varnaapi.BasicDraw]. The standard class to draw from given secondary structure or/and RNA sequence is [Structure][varnaapi.Structure].
 ```python
 ss = "((((((.((((((........)))))).((((((.......))))))..))))))"
 v = varnaapi.Structure(structure=ss)
 ```
+
+### Print
 
 One can call the member function `#!python BasicDraw.savefig()` with given file name to save the drawing. The format is either `png` or `svg`, that VARNA will determine from the file name.
 
@@ -61,7 +70,7 @@ v.show()
 
 The later one creates a temporary file in `png` format for drawing.
 
-### Configuration
+### Style Configuration
 
 In VARNA, one can chose the structure drawing algorithm, change the style for base pair, or hide backbone in drawing etc.
 The full list of parameters with default value can be found [here](config).
@@ -72,7 +81,8 @@ Some parameters, such as algorithm, can be set up via specific function. The res
 v.update(algorithm='naview', bpStyle='none', drawBackbone=False, bp='#006400')
 ```
 
-!!! note "Color parameters"
+??? note "Color parameters"
+    
     Value for all color parameters in VARNA API should be readable by the object [colour.Color](https://github.com/vaab/colour), such as human color name, hex, RGB etc.
 
 #### Save configuration
@@ -103,14 +113,22 @@ varnaapi.load_config('config.yml')
     - Default parameter values.
 
 
-#### Operations
-VARNA allows different operations on drawing, such as highlighting a region, adding auxiliary base pairs.
+### Operations
+In addition to changing drawing style, VARNA provides different operations on drawing, such as highlighting a region, adding auxiliary base pairs.
 This can be achieved by using the proper functions. We invite users to read API for more details.
 ```python
 v.add_highlight_region(1, 6, radius=20)
 v.add_aux_bp(1, 10, color='red')
 ```
 
+### Hack mode
+
+By default, VARNA api performs syntax check to verify the command line sent to VARNA is in the correct format. This might have conflict with non-standard VARNA versions, so that one might need to enable hack mode with `varnaapi.enable_hack`. See [here](gallery/Module-drawing-with-hacked-option/) for an example.
+
+
+## Questions and Bugs
+
+Feel free to raise a [github issue](https://github.com/anthonyhtyao/varnaapi/issues) if you have a question or find a bug.
 
 ## Credits
 Please kindly cite VARNA [supporting manuscript](https://doi.org/10.1093/bioinformatics/btp250) if you use VARNA API in your research.
